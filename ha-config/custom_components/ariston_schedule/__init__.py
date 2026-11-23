@@ -1,12 +1,15 @@
 """Ariston Velis built-in schedule (time program) for Home Assistant."""
 from __future__ import annotations
 
+import hashlib
 import json
 import logging
 from pathlib import Path
 
 import voluptuous as vol
 
+from homeassistant.components.frontend import add_extra_js_url
+from homeassistant.components.http import StaticPathConfig
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_PASSWORD, CONF_USERNAME, Platform
 from homeassistant.core import HomeAssistant, ServiceCall, ServiceResponse, SupportsResponse
@@ -25,6 +28,7 @@ from .const import (
     SERVICE_RESTORE_BACKUP,
     SERVICE_SET_DAYS,
     SERVICE_SET_SCHEDULE,
+    translated_error,
 )
 from .coordinator import AristonScheduleCoordinator
 
@@ -62,26 +66,43 @@ SET_SCHEDULE_SCHEMA = vol.Schema(
 RESTORE_SCHEMA = vol.Schema({vol.Optional("file"): cv.string})
 
 
+FRONTEND_DIR = Path(__file__).parent / "frontend"
+FRONTEND_URL = "/ariston_schedule_frontend"
+
+
+def _frontend_version() -> str:
+    h = hashlib.sha1()
+    for f in sorted(FRONTEND_DIR.glob("*.js")):
+        h.update(f.read_bytes())
+    return h.hexdigest()[:10]
+
+
 async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
-    """Register services once."""
+    """Serve the dashboard strategy (multilingual dashboard) and register services once."""
+    version = await hass.async_add_executor_job(_frontend_version)
+    await hass.http.async_register_static_paths(
+        [StaticPathConfig(FRONTEND_URL, str(FRONTEND_DIR), cache_headers=False)]
+    )
+    # loaded by every frontend session; defines the dashboard strategy "custom:bojler"
+    add_extra_js_url(hass, f"{FRONTEND_URL}/bojler-dashboard.js?v={version}")
 
     def _coordinator() -> AristonScheduleCoordinator:
         entries = [e for e in hass.config_entries.async_loaded_entries(DOMAIN)]
         if not entries:
-            raise HomeAssistantError("Ariston raspored integracija nije učitana")
+            raise translated_error("not_loaded")
         return entries[0].runtime_data
 
     def _slots(raw: list[dict]) -> list[sm.Slot]:
         try:
             return [sm.parse_slot(s) for s in raw]
         except sm.ScheduleError as err:
-            raise HomeAssistantError(str(err)) from err
+            raise translated_error(err.code, **err.placeholders) from err
 
     def _days(raw) -> list[int]:
         try:
             return sm.parse_days(raw)
         except sm.ScheduleError as err:
-            raise HomeAssistantError(str(err)) from err
+            raise translated_error(err.code, **err.placeholders) from err
 
     async def set_days(call: ServiceCall) -> ServiceResponse:
         coord = _coordinator()
@@ -101,11 +122,11 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
         coord = _coordinator()
         backups = await hass.async_add_executor_job(coord.list_backups)
         if not backups:
-            raise HomeAssistantError("Nema sačuvanih backup-a")
+            raise translated_error("no_backups")
         name = call.data.get("file")
         path: Path | None = next((b for b in backups if b.name == name), None) if name else backups[-1]
         if path is None:
-            raise HomeAssistantError(f"Backup {name} ne postoji. Dostupni: {[b.name for b in backups[-10:]]}")
+            raise translated_error("backup_missing", name=name, available=", ".join(b.name for b in backups[-10:]))
         raw = json.loads(await hass.async_add_executor_job(path.read_text, "utf-8"))
         week = sm.week_from_api(raw.get("schedule", raw))
         result = await coord.async_write_week(week, f"restore {path.name}")

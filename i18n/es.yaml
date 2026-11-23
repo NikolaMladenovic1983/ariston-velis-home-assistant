@@ -1,0 +1,250 @@
+language_name: Español
+
+integration:
+  config:
+    step:
+      user:
+        title: Cuenta de Ariston
+        description: El mismo correo electrónico y la misma contraseña que en la aplicación oficial Ariston NET.
+        data:
+          username: Correo electrónico
+          password: Contraseña
+      device:
+        title: Seleccionar el termo
+        data:
+          gateway_id: Termo
+    error:
+      invalid_auth: Correo electrónico o contraseña incorrectos
+      cannot_connect: No se puede conectar con el servidor de Ariston
+      no_devices: No hay ningún termo Velis en esta cuenta
+    abort:
+      already_configured: Este termo ya está configurado
+  options:
+    step:
+      init:
+        title: Tarifa valle
+        description: Horas de la tarifa eléctrica barata (valle), usadas para los sensores de consumo y de coste.
+        data:
+          cheap_start_hour: Inicio (hora)
+          cheap_end_hour: Fin (hora)
+  device:
+    boiler_schedule:
+      name: Programa del termo
+  entity:
+    sensor:
+      schedule: {name: Programa}
+      next_slot: {name: Próxima franja}
+      energy_24h: {name: Consumo últimas 24 h}
+      energy_cheap_24h: {name: Consumo en tarifa valle 24 h}
+      cheap_share_24h: {name: Proporción tarifa valle 24 h}
+      energy_7d: {name: Consumo últimos 7 días}
+      energy_total: {name: Consumo total}
+      energy_cheap: {name: Consumo total tarifa valle}
+      energy_expensive: {name: Consumo total tarifa punta}
+      cost_cheap: {name: Coste tarifa valle}
+      cost_expensive: {name: Coste tarifa punta}
+      cost_total: {name: Coste total}
+      export_xlsx: {name: Informe Excel}
+  exceptions:
+    not_loaded: {message: La integración Programa de Ariston no está cargada}
+    invalid_time: {message: "Hora no válida: {value} (se esperaba HH:MM)"}
+    invalid_day: {message: "Día no válido: {value}"}
+    no_days: {message: No se ha indicado ningún día}
+    temp_and_showers: {message: "{time}: indica una temperatura o un número de duchas, no ambos"}
+    temp_range: {message: "{time}: la temperatura {temp} °C está fuera del rango {min}–{max} °C"}
+    showers_range: {message: "{time}: el número de duchas debe ser 1–{max}"}
+    duplicate_time: {message: "{day}: dos franjas a la misma hora"}
+    too_many_slots: {message: "{day}: como máximo {max} franjas por día"}
+    empty_schedule: {message: El programa no puede estar completamente vacío}
+    read_failed: {message: "No se puede leer el programa actual: {error}"}
+    write_failed: {message: "No se pudo escribir el programa: {error} (copia de seguridad: {backup})"}
+    verify_failed: {message: "Ariston aceptó la escritura, pero el programa leído de nuevo es distinto. Copia de seguridad: {backup}"}
+    no_backups: {message: No hay copias de seguridad guardadas}
+    backup_missing: {message: "La copia de seguridad {name} no existe. Disponibles: {available}"}
+  services:
+    set_days:
+      name: Definir el programa de algunos días
+      description: Sustituye las franjas de los días elegidos (los demás días no cambian). Antes de escribir se hace una copia de seguridad y después se comprueba el resultado.
+      fields:
+        days:
+          name: Días
+          description: "all, workdays, weekend, mon…sun o 0–6 (0 = domingo)"
+        slots:
+          name: Franjas
+          description: 'Lista de franjas: [{"time": "06:00", "temp": 75}] o [{"time": "07:00", "showers": 2}]. Hora = cuándo debe estar lista el agua.'
+    set_schedule:
+      name: Definir todo el programa
+      description: Sustituye todo el programa semanal. Los días no indicados quedan sin franjas.
+      fields:
+        plans:
+          name: Planes
+          description: '[{"days": "workdays", "slots": [...]}, {"days": "weekend", "slots": [...]}]'
+    restore_backup:
+      name: Restaurar el programa desde una copia de seguridad
+      description: Sin nombre de archivo restaura el programa tal como estaba antes del último cambio.
+      fields:
+        file:
+          name: Archivo
+          description: Nombre del archivo de copia de seguridad en /config/ariston_schedule_backups
+    refresh:
+      name: Actualizar
+      description: Leer ahora el programa y el consumo desde el servidor de Ariston.
+    export_xlsx:
+      name: Crear informe Excel
+      description: Crea un archivo .xlsx con el consumo (kWh) y el coste por tarifa, por mes, día y hora. El enlace está en el sensor «Informe Excel».
+
+days: {mon: Lunes, tue: Martes, wed: Miércoles, thu: Jueves, fri: Viernes, sat: Sábado, sun: Domingo}
+
+dashboard:
+  title: Termo
+  tab_home: Termo
+  tab_usage: Consumo
+  tab_schedule: Programa
+  tab_settings: Ajustes
+  badge_heating: Calentando
+  badge_mode: Modo
+  badge_next: Próxima franja
+  mode_PROGRAM: Programa
+  mode_MANUAL: Manual
+  mode_BOOST: Boost
+  h_water: Agua caliente
+  gauge_name: Temperatura del agua
+  showers: Duchas
+  target: Objetivo
+  time_to_heat: Hasta calentar
+  h_manual: Calentamiento manual
+  manual_switch: Calentar ahora (fuera del programa)
+  manual_confirm: "Encendido: calienta de inmediato hasta la temperatura elegida (de día la electricidad es más cara) y luego vuelve solo al programa. Apagado: vuelve al programa de inmediato."
+  manual_confirm_short: ¿Activar o desactivar el calentamiento manual?
+  heat_to: Calentar hasta
+  h_cost: Coste
+  cheap_24h: Valle 24 h
+  today: Hoy
+  this_month: Este mes
+  h_usage: Consumo y coste
+  table_title: kWh y coste por tarifa
+  usage_graph: Consumo por tarifa
+  excel_link: Descargar Excel (.xlsx)
+  excel_desc: "Por mes, día y hora · kWh y coste por tarifa · actualizado {time}"
+  excel_pending: Se está preparando el informe Excel…
+  refresh: Actualizar
+  h_monthly: Por mes
+  cost_by_month: "Coste por mes ({cur})"
+  kwh_by_month: Consumo por mes (kWh)
+  cheap: Tarifa valle
+  expensive: Tarifa punta
+  h_habits: Hábitos de calentamiento
+  cheap_share: Proporción tarifa valle (24 h)
+  temp_48h: Temperatura del agua (48 h)
+  water: Agua
+  heating: Calentando
+  lag_note: Ariston informa del consumo con 1–3 h de retraso, por lo que por hora aparece más tarde que el calentamiento real. Los totales diarios y mensuales son exactos; la tarifa se determina según la hora real de calentamiento.
+  h_schedule: Programa del termo
+  every_day: Todos los días
+  weekdays: Laborables
+  weekend: Fin de semana
+  schedule_note: Hora = cuándo debe estar lista el agua; el termo empieza a calentar antes por sí solo.
+  cheap_tariff: Tarifa valle
+  last_change: Último cambio
+  next_slot: Próxima franja
+  h_edit: Editar
+  form_diff: El formulario es distinto del programa del termo
+  form_diff_confirm: ¿Cargar en el formulario el programa del termo? Se descartarán los cambios del formulario.
+  form_diff_note: «Aplicar» escribiría los valores del formulario. Si no es lo que quieres, toca el aviso o «Cargar actual».
+  weekdays_title: Laborables (lun–vie)
+  weekend_title: Fin de semana (sáb–dom)
+  slot1: Franja 1
+  temp1: Temperatura 1
+  second_slot: Segunda franja
+  slot2: Franja 2
+  temp2: Temperatura 2
+  load_current: Cargar actual
+  apply: Aplicar
+  apply_confirm: ¿Escribir en el termo el programa del formulario? Antes de escribir se hace una copia de seguridad.
+  undo: Restaurar anterior
+  undo_confirm: ¿Restaurar el programa tal como estaba antes del último cambio?
+  h_prices: Precios de la electricidad
+  price_cheap: "Tarifa valle ({cur}/kWh)"
+  price_expensive: "Tarifa punta ({cur}/kWh)"
+  price_note: Un precio nuevo se aplica al consumo contabilizado desde el momento del cambio; los importes ya contabilizados no cambian.
+  notify_language: Idioma de las notificaciones y del informe Excel
+  totals_title: Total desde el inicio de las mediciones
+  total_kwh: Consumo
+  total_cheap: "– tarifa valle"
+  total_expensive: "– tarifa punta"
+  total_cost: Coste
+  h_advanced: Avanzado
+  mode: Modo
+  back_to_schedule: Volver al programa
+  boost: BOOST (lo más rápido)
+  boost_confirm: BOOST calienta de inmediato a plena potencia (de día la electricidad es más cara). ¿Iniciar?
+  power: Encendido
+  eco: Eco
+  errors: Errores
+  antileg: Antilegionela
+  antileg_on: activada ✅
+  antileg_off: "⚠️ DESACTIVADA — actívala en la aplicación oficial de Ariston"
+  max_temp: Temperatura máx.
+  readonly_note: Estos ajustes no se cambian desde el panel de forma intencionada.
+
+notify:
+  mode_PROGRAM: programa
+  mode_MANUAL: manual
+  mode_BOOST: BOOST
+  morning_title: Termo – mañana
+  morning_msg: "Agua a {temp} °C, {showers} ducha(s). Consumido esta noche en tarifa valle: {cheap} kWh (proporción 24 h: {share} %)."
+  ready_title: Termo – agua lista
+  ready_msg: "Calentamiento terminado: {temp} °C, {showers} ducha(s)."
+  expensive_title: El termo está calentando en tarifa punta
+  expensive_msg: "Calentando desde las {since} (agua a {temp} °C, modo: {mode})."
+  low_title: Termo – poca agua caliente
+  low_msg: "El agua está a {temp} °C. ¿Activar BOOST (tarifa punta)?"
+  boost_button: BOOST
+  boost_on: BOOST activado.
+  boost_long_title: Termo – BOOST
+  boost_long_msg: El BOOST lleva 2 horas activado. ¿Volver al programa desde el panel?
+  conn_title: Termo – conexión
+  conn_lost: "Sin datos del servidor de Ariston desde hace 30 min ({name}). El termo sigue funcionando con su programa integrado."
+  conn_back: Vuelven a llegar datos del servidor de Ariston.
+  manual_title: Termo – calentamiento manual terminado
+  manual_reached: "Agua calentada a {temp} °C (objetivo {target} °C)."
+  manual_already: "El agua ya está a {temp} °C, no hace falta calentar hasta {target} °C."
+  manual_timeout: "El calentamiento manual duró 4 h y se detuvo (agua a {temp} °C)."
+  manual_back: El termo ha vuelto al programa.
+  antileg_title: Termo – antilegionela DESACTIVADA
+  antileg_msg: La protección contra la legionela se acaba de desactivar. Si no era intencionado, actívala en la aplicación oficial de Ariston.
+  error_title: Termo – ERROR
+  error_msg: "El termo indica un error (número de errores: {count}). Revisa la pantalla del termo o la aplicación oficial."
+  sched_title: Termo – programa
+  sched_written: "Programa escrito y comprobado. Laborables: {weekdays}. Fin de semana: {weekend}. (copia de seguridad: {backup})"
+  sched_unchanged: El programa ya es así, no se ha cambiado nada.
+  sched_restored: "Programa restaurado desde {file}."
+
+excel:
+  file_name: termo_consumo.xlsx
+  sheet_month: Por mes
+  sheet_day: Por día
+  sheet_hour: Por hora
+  sheet_info: Info
+  col_month: Mes
+  col_date: Fecha
+  col_hour: Hora (inicio)
+  kwh_cheap: kWh valle
+  kwh_expensive: kWh punta
+  kwh_total: kWh total
+  cur_cheap: "{cur} valle"
+  cur_expensive: "{cur} punta"
+  cur_total: "{cur} total"
+  share: Proporción valle
+  total: Total
+  item: Concepto
+  value: Valor
+  created: Creado
+  cheap_hours: Tarifa valle
+  price_cheap: "Precio valle ({cur}/kWh)"
+  price_expensive: "Precio punta ({cur}/kWh)"
+  total_since: Total desde el inicio de las mediciones (kWh)
+  note: Nota
+  note_text: 'Ariston informa del consumo con 1–3 h de retraso; la hoja «{sheet}» muestra la hora en que se contabilizó el consumo (solo las horas con consumo). Los totales diarios y mensuales son exactos; la tarifa se determina según la hora real de calentamiento.'
+  cost: Coste
+  cost_text: Cada kWh se valora al precio de la tarifa vigente en el momento en que se contabilizó.

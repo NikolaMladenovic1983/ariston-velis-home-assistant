@@ -131,9 +131,10 @@ template:
             {{ (t.split('→')[1] if '→' in t else '') | replace('°C', '') | trim | float(none) }}
           {% endif %}
         attributes:
-          izvor: >
-            {% if states('water_heater.bojler') in ['MANUAL', 'BOOST'] %}ručno grejanje
-            {% else %}raspored ({{ (state_attr('sensor.bojler_raspored_sledeci_termin', 'termin') or '—').split(' ')[0] }}){% endif %}
+          # time of the schedule slot the target belongs to ("" while heating manually) — shown on the dashboard
+          vreme: >
+            {% if states('water_heater.bojler') in ['MANUAL', 'BOOST'] %}{{ '' }}
+            {% else %}{{ (state_attr('sensor.bojler_raspored_sledeci_termin', 'termin') or '').split(' ')[0] }}{% endif %}
         availability: >
           {{ states('water_heater.bojler') not in ['unavailable', 'unknown'] }}
 
@@ -154,7 +155,7 @@ template:
             {% if ns == 'r' %}{% set f.r = lst | sort %}{% else %}{% set f.v = lst | sort %}{% endif %}
           {% endfor %}
           {% set r = state_attr('sensor.bojler_raspored_raspored', 'raspored') or {} %}
-          {{ f.r != r.get('Ponedeljak', []) or f.v != r.get('Subota', []) }}
+          {{ f.r != r.get('mon', []) or f.v != r.get('sat', []) }}
         availability: "{{ state_attr('sensor.bojler_raspored_raspored', 'raspored') is not none }}"
 
   # One switch: ON = manual heating (MANUAL or BOOST), OFF = back to the schedule (PROGRAM).
@@ -278,13 +279,13 @@ script:
         response_variable: rezultat
       - action: persistent_notification.create
         data:
-          title: Bojler – raspored
+          title: "{% from 'bojler_i18n.jinja' import t %}{{ t('sched_title') }}"
           notification_id: bojler_raspored
           message: >
-            {% if rezultat.changed %}Raspored upisan i proveren.
-            Radni dani: {{ rezultat.after['Ponedeljak'] | join(', ') }}.
-            Vikend: {{ rezultat.after['Subota'] | join(', ') }}.
-            (backup: {{ rezultat.backup }}){% else %}Raspored je već takav — ništa nije menjano.{% endif %}
+            {% from 'bojler_i18n.jinja' import t %}
+            {% if rezultat.changed %}{{ t('sched_written', {'weekdays': rezultat.after['mon'] | join(', '),
+              'weekend': rezultat.after['sat'] | join(', '), 'backup': rezultat.backup}) }}
+            {% else %}{{ t('sched_unchanged') }}{% endif %}
 
   bojler_vrati_prethodni_raspored:
     alias: Bojler – vrati raspored pre poslednje izmene
@@ -295,9 +296,9 @@ script:
         response_variable: rezultat
       - action: persistent_notification.create
         data:
-          title: Bojler – raspored
+          title: "{% from 'bojler_i18n.jinja' import t %}{{ t('sched_title') }}"
           notification_id: bojler_raspored
-          message: "Vraćen raspored iz {{ rezultat.restored_from }}."
+          message: "{% from 'bojler_i18n.jinja' import t %}{{ t('sched_restored', {'file': rezultat.restored_from}) }}"
 
   bojler_boost:
     alias: Bojler – BOOST (odmah zagrej)

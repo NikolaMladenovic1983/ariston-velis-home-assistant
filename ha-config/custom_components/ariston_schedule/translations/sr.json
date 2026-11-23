@@ -2,83 +2,178 @@
   "config": {
     "step": {
       "user": {
-        "title": "Ariston nalog",
-        "description": "Isti email i lozinka kao u zvaničnoj Ariston NET aplikaciji.",
+        "title": "Ariston налог",
+        "description": "Исти email и лозинка као у званичној Ariston NET апликацији.",
         "data": {
           "username": "Email",
-          "password": "Lozinka"
+          "password": "Лозинка"
         }
       },
       "device": {
-        "title": "Izbor bojlera",
+        "title": "Избор бојлера",
         "data": {
-          "gateway_id": "Bojler"
+          "gateway_id": "Бојлер"
         }
       }
     },
     "error": {
-      "invalid_auth": "Pogrešan email ili lozinka",
-      "cannot_connect": "Ne mogu da se povežem na Ariston server",
-      "no_devices": "Na nalogu nema Velis bojlera"
+      "invalid_auth": "Погрешан email или лозинка",
+      "cannot_connect": "Не могу да се повежем на Ariston сервер",
+      "no_devices": "На налогу нема Velis бојлера"
     },
     "abort": {
-      "already_configured": "Ovaj bojler je već dodat"
+      "already_configured": "Овај бојлер је већ додат"
     }
   },
   "options": {
     "step": {
       "init": {
-        "title": "Jeftina tarifa",
-        "description": "Sati jeftine (niže) tarife struje — koristi se za senzore potrošnje.",
+        "title": "Јефтина тарифа",
+        "description": "Сати јефтине (ниже) тарифе струје, користе се за сензоре потрошње и трошка.",
         "data": {
-          "cheap_start_hour": "Početak (sat)",
-          "cheap_end_hour": "Kraj (sat)"
+          "cheap_start_hour": "Почетак (сат)",
+          "cheap_end_hour": "Крај (сат)"
         }
       }
     }
   },
+  "device": {
+    "boiler_schedule": {
+      "name": "Бојлер распоред"
+    }
+  },
+  "entity": {
+    "sensor": {
+      "schedule": {
+        "name": "Распоред"
+      },
+      "next_slot": {
+        "name": "Следећи термин"
+      },
+      "energy_24h": {
+        "name": "Потрошња последња 24h"
+      },
+      "energy_cheap_24h": {
+        "name": "Потрошња у јефтиној тарифи 24h"
+      },
+      "cheap_share_24h": {
+        "name": "Удео јефтине тарифе 24h"
+      },
+      "energy_7d": {
+        "name": "Потрошња 7 дана"
+      },
+      "energy_total": {
+        "name": "Укупна потрошња"
+      },
+      "energy_cheap": {
+        "name": "Укупна потрошња јефтина тарифа"
+      },
+      "energy_expensive": {
+        "name": "Укупна потрошња скупа тарифа"
+      },
+      "cost_cheap": {
+        "name": "Трошак јефтина тарифа"
+      },
+      "cost_expensive": {
+        "name": "Трошак скупа тарифа"
+      },
+      "cost_total": {
+        "name": "Трошак укупно"
+      },
+      "export_xlsx": {
+        "name": "Excel извештај"
+      }
+    }
+  },
+  "exceptions": {
+    "not_loaded": {
+      "message": "Интеграција Ariston распоред није учитана"
+    },
+    "invalid_time": {
+      "message": "Неисправно време: {value} (очекивано HH:MM)"
+    },
+    "invalid_day": {
+      "message": "Неисправан дан: {value}"
+    },
+    "no_days": {
+      "message": "Није задат ниједан дан"
+    },
+    "temp_and_showers": {
+      "message": "{time}: задај или температуру или број тушева, не оба"
+    },
+    "temp_range": {
+      "message": "{time}: температура {temp} °C је ван опсега {min}–{max} °C"
+    },
+    "showers_range": {
+      "message": "{time}: број тушева мора бити 1–{max}"
+    },
+    "duplicate_time": {
+      "message": "{day}: два термина у исто време"
+    },
+    "too_many_slots": {
+      "message": "{day}: највише {max} термина дневно"
+    },
+    "empty_schedule": {
+      "message": "Распоред не може бити потпуно празан"
+    },
+    "read_failed": {
+      "message": "Не могу да прочитам тренутни распоред: {error}"
+    },
+    "write_failed": {
+      "message": "Упис распореда није успео: {error} (резервна копија: {backup})"
+    },
+    "verify_failed": {
+      "message": "Ariston је прихватио упис, али се прочитани распоред разликује. Резервна копија: {backup}"
+    },
+    "no_backups": {
+      "message": "Нема сачуваних резервних копија"
+    },
+    "backup_missing": {
+      "message": "Резервна копија {name} не постоји. Доступне: {available}"
+    }
+  },
   "services": {
     "set_days": {
-      "name": "Postavi raspored za dane",
-      "description": "Zameni termine za izabrane dane (ostali dani ostaju isti). Pre upisa se pravi backup, posle upisa provera.",
+      "name": "Постави распоред за дане",
+      "description": "Замењује термине за изабране дане (остали дани остају исти). Пре уписа се прави резервна копија, а после уписа се проверава резултат.",
       "fields": {
         "days": {
-          "name": "Dani",
-          "description": "svi, radni, vikend ili pon/uto/sre/cet/pet/sub/ned"
+          "name": "Дани",
+          "description": "сви, радни, викенд, пон…нед или 0–6 (0 = недеља)"
         },
         "slots": {
-          "name": "Termini",
-          "description": "Lista termina: [{\"time\": \"06:00\", \"temp\": 75}] ili [{\"time\": \"07:00\", \"showers\": 2}]. Vreme = kada voda treba da bude spremna."
+          "name": "Термини",
+          "description": "Листа термина: [{\"time\": \"06:00\", \"temp\": 75}] или [{\"time\": \"07:00\", \"showers\": 2}]. Време = када вода треба да буде спремна."
         }
       }
     },
     "set_schedule": {
-      "name": "Postavi ceo raspored",
-      "description": "Zameni ceo nedeljni raspored. Dani koji nisu navedeni ostaju bez termina.",
+      "name": "Постави цео распоред",
+      "description": "Замењује цео недељни распоред. Дани који нису наведени остају без термина.",
       "fields": {
         "plans": {
-          "name": "Planovi",
+          "name": "Планови",
           "description": "[{\"days\": \"radni\", \"slots\": [...]}, {\"days\": \"vikend\", \"slots\": [...]}]"
         }
       }
     },
     "restore_backup": {
-      "name": "Vrati raspored iz backup-a",
-      "description": "Bez imena fajla vraća stanje pre poslednje izmene.",
+      "name": "Врати распоред из резервне копије",
+      "description": "Без имена фајла враћа распоред какав је био пре последње измене.",
       "fields": {
         "file": {
-          "name": "Fajl",
-          "description": "Ime backup fajla iz /config/ariston_schedule_backups"
+          "name": "Фајл",
+          "description": "Име фајла резервне копије из /config/ariston_schedule_backups"
         }
       }
     },
     "refresh": {
-      "name": "Osveži",
-      "description": "Odmah pročitaj raspored i potrošnju sa Ariston servera."
+      "name": "Освежи",
+      "description": "Одмах прочитај распоред и потрошњу са Ariston сервера."
     },
     "export_xlsx": {
-      "name": "Napravi Excel izveštaj",
-      "description": "Pravi .xlsx sa potrošnjom (kWh) i troškom po tarifi po mesecima, danima i satima; link je u senzoru „Excel izveštaj“."
+      "name": "Направи Excel извештај",
+      "description": "Прави .xlsx фајл са потрошњом (kWh) и трошком по тарифи по месецима, данима и сатима. Линк је у сензору „Excel извештај“."
     }
   }
 }

@@ -1,0 +1,41 @@
+{
+  "language_name": "Srpski",
+  "excel": {
+    "file_name": "bojler_potrosnja.xlsx",
+    "sheet_month": "Po mesecima",
+    "sheet_day": "Po danima",
+    "sheet_hour": "Po satima",
+    "sheet_info": "Info",
+    "col_month": "Mesec",
+    "col_date": "Datum",
+    "col_hour": "Sat (početak)",
+    "kwh_cheap": "kWh jeftina",
+    "kwh_expensive": "kWh skupa",
+    "kwh_total": "kWh ukupno",
+    "cur_cheap": "{cur} jeftina",
+    "cur_expensive": "{cur} skupa",
+    "cur_total": "{cur} ukupno",
+    "share": "Udeo jeftine",
+    "total": "Ukupno",
+    "item": "Stavka",
+    "value": "Vrednost",
+    "created": "Napravljeno",
+    "cheap_hours": "Jeftina tarifa",
+    "price_cheap": "Cena jeftina ({cur}/kWh)",
+    "price_expensive": "Cena skupa ({cur}/kWh)",
+    "total_since": "Ukupno od početka merenja (kWh)",
+    "note": "Napomena",
+    "note_text": "Ariston šalje potrošnju sa zakašnjenjem od 1–3 h; list „{sheet}“ prikazuje sat u kom je potrošnja obračunata (samo sati sa potrošnjom). Dnevni i mesečni zbirovi su tačni; tarifa se određuje po stvarnom vremenu grejanja.",
+    "cost": "Trošak",
+    "cost_text": "Svaki kWh po ceni tarife koja je važila u trenutku obračuna."
+  },
+  "days": {
+    "mon": "Ponedeljak",
+    "tue": "Utorak",
+    "wed": "Sreda",
+    "thu": "Četvrtak",
+    "fri": "Petak",
+    "sat": "Subota",
+    "sun": "Nedelja"
+  }
+}

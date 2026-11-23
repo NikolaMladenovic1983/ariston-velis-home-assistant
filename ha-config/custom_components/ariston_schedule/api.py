@@ -50,7 +50,7 @@ class AristonScheduleApi:
             "POST", "accounts/login", {"usr": self._username, "pwd": self._password}, auth=False
         )
         if status in (400, 401, 403) or (status == 200 and not isinstance(data, dict)):
-            raise AristonAuthError("Pogrešan email ili lozinka")
+            raise AristonAuthError("invalid email or password")
         if status != 200 or "token" not in data:
             raise AristonApiError(f"login HTTP {status}")
         self._token = data["token"]
@@ -64,7 +64,7 @@ class AristonScheduleApi:
                 await self.login()
                 status, data = await self._raw(method, path, body)
             if status == 429:
-                raise AristonApiError("Ariston ograničenje broja zahteva (429) — pokušaj kasnije")
+                raise AristonApiError("Ariston rate limit (HTTP 429), try again later")
             if status != 200:
                 raise AristonApiError(f"{method} {path} -> HTTP {status}: {str(data)[:200]}")
             return data

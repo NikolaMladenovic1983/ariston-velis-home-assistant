@@ -33,14 +33,20 @@ DAY_GROUPS: dict[str, list[int]] = {
     "workdays": [1, 2, 3, 4, 5], "radni": [1, 2, 3, 4, 5],
     "weekend": [6, 0], "vikend": [6, 0],
 }
-DAY_NAMES_SR = ["Nedelja", "Ponedeljak", "Utorak", "Sreda", "Četvrtak", "Petak", "Subota"]
+# Language-neutral day keys (index = Ariston day number). Display names come from the translations.
+DAY_KEYS = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"]
 WEEK_ORDER = [1, 2, 3, 4, 5, 6, 0]
 
 _TIME_RE = re.compile(r"^(\d{1,2}):(\d{2})(?::(\d{2}))?$")
 
 
 class ScheduleError(ValueError):
-    """Invalid schedule."""
+    """Invalid schedule. `code` is a translation key (integration exceptions), `placeholders` its values."""
+
+    def __init__(self, code: str, **placeholders: Any) -> None:
+        self.code = code
+        self.placeholders = {k: str(v) for k, v in placeholders.items()}
+        super().__init__(f"{code}: {self.placeholders}")
 
 
 @dataclass(frozen=True, order=True)
@@ -55,7 +61,7 @@ class Slot:
         return {"time": self.time, "qty": int(self.showers), "temp": 0.0}
 
     def describe(self) -> str:
-        what = f"{self.temp:g} °C" if self.temp else f"{self.showers} tuš(a)"
+        what = f"{self.temp:g} °C" if self.temp else f"{self.showers} × 🚿"
         return f"{self.time[:5]} → {what}"
 
 
@@ -64,10 +70,10 @@ def parse_time(value: Any) -> str:
         return value.strftime("%H:%M:%S")
     m = _TIME_RE.match(str(value).strip())
     if not m:
-        raise ScheduleError(f"Neispravno vreme: {value!r} (očekivano HH:MM)")
+        raise ScheduleError("invalid_time", value=value)
     h, mi, s = int(m.group(1)), int(m.group(2)), int(m.group(3) or 0)
     if not (0 <= h <= 23 and 0 <= mi <= 59 and 0 <= s <= 59):
-        raise ScheduleError(f"Neispravno vreme: {value!r}")
+        raise ScheduleError("invalid_time", value=value)
     return f"{h:02d}:{mi:02d}:{s:02d}"
 
 
@@ -77,7 +83,7 @@ def parse_days(value: Any) -> list[int]:
     for item in items:
         if isinstance(item, int) and not isinstance(item, bool):
             if not 0 <= item <= 6:
-                raise ScheduleError(f"Neispravan dan: {item}")
+                raise ScheduleError("invalid_day", value=item)
             days.append(item)
             continue
         key = str(item).strip().lower()
@@ -88,9 +94,9 @@ def parse_days(value: Any) -> list[int]:
         elif key.isdigit() and 0 <= int(key) <= 6:
             days.append(int(key))
         else:
-            raise ScheduleError(f"Nepoznat dan: {item!r}")
+            raise ScheduleError("invalid_day", value=item)
     if not days:
-        raise ScheduleError("Nije zadat nijedan dan")
+        raise ScheduleError("no_days")
     return sorted(set(days), key=WEEK_ORDER.index)
 
 
@@ -101,13 +107,13 @@ def parse_slot(raw: dict[str, Any]) -> Slot:
     if "qty" in raw and not showers and not temp:
         showers = max(0, int(raw["qty"]))
     if temp and showers:
-        raise ScheduleError(f"{time[:5]}: zadaj ILI temperaturu ILI broj tuševa, ne oba")
+        raise ScheduleError("temp_and_showers", time=time[:5])
     if temp:
         if not MIN_TEMP <= temp <= MAX_TEMP:
-            raise ScheduleError(f"{time[:5]}: temperatura {temp:g} van opsega {MIN_TEMP:g}–{MAX_TEMP:g} °C")
+            raise ScheduleError("temp_range", time=time[:5], temp=f"{temp:g}", min=f"{MIN_TEMP:g}", max=f"{MAX_TEMP:g}")
         return Slot(time=time, temp=temp)
     if not 1 <= showers <= MAX_SHOWERS:
-        raise ScheduleError(f"{time[:5]}: broj tuševa mora biti 1–{MAX_SHOWERS}")
+        raise ScheduleError("showers_range", time=time[:5], max=MAX_SHOWERS)
     return Slot(time=time, showers=showers)
 
 
@@ -134,11 +140,11 @@ def validate_week(week: Week) -> None:
     for d, slots in week.items():
         times = [s.time for s in slots]
         if len(times) != len(set(times)):
-            raise ScheduleError(f"{DAY_NAMES_SR[d]}: dva termina u isto vreme")
+            raise ScheduleError("duplicate_time", day=DAY_KEYS[d])
         if len(slots) > MAX_SLOTS_PER_DAY:
-            raise ScheduleError(f"{DAY_NAMES_SR[d]}: najviše {MAX_SLOTS_PER_DAY} termina dnevno")
+            raise ScheduleError("too_many_slots", day=DAY_KEYS[d], max=MAX_SLOTS_PER_DAY)
     if not any(week.values()):
-        raise ScheduleError("Raspored ne može biti potpuno prazan")
+        raise ScheduleError("empty_schedule")
 
 
 def week_to_api(week: Week) -> dict[str, Any]:
@@ -167,7 +173,8 @@ def normalize_api(api: dict[str, Any]) -> dict[str, Any]:
 
 
 def describe_week(week: Week) -> dict[str, list[str]]:
-    return {DAY_NAMES_SR[d]: [s.describe() for s in week[d]] for d in WEEK_ORDER}
+    """{"mon": ["06:00 → 75 °C"], ...} — language-neutral keys, Monday first."""
+    return {DAY_KEYS[d]: [s.describe() for s in week[d]] for d in WEEK_ORDER}
 
 
 def next_slot(week: Week, now: dt.datetime) -> tuple[dt.datetime, Slot] | None:

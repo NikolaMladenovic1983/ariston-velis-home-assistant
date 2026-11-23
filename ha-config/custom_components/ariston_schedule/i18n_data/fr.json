@@ -1,0 +1,41 @@
+{
+  "language_name": "Français",
+  "excel": {
+    "file_name": "chauffe-eau_consommation.xlsx",
+    "sheet_month": "Par mois",
+    "sheet_day": "Par jour",
+    "sheet_hour": "Par heure",
+    "sheet_info": "Infos",
+    "col_month": "Mois",
+    "col_date": "Date",
+    "col_hour": "Heure (début)",
+    "kwh_cheap": "kWh heures creuses",
+    "kwh_expensive": "kWh heures pleines",
+    "kwh_total": "kWh total",
+    "cur_cheap": "{cur} heures creuses",
+    "cur_expensive": "{cur} heures pleines",
+    "cur_total": "{cur} total",
+    "share": "Part heures creuses",
+    "total": "Total",
+    "item": "Élément",
+    "value": "Valeur",
+    "created": "Créé le",
+    "cheap_hours": "Heures creuses",
+    "price_cheap": "Prix heures creuses ({cur}/kWh)",
+    "price_expensive": "Prix heures pleines ({cur}/kWh)",
+    "total_since": "Total depuis le début des mesures (kWh)",
+    "note": "Remarque",
+    "note_text": "Ariston transmet la consommation avec 1 à 3 h de retard ; la feuille « {sheet} » indique l'heure à laquelle la consommation a été comptée (uniquement les heures avec consommation). Les totaux journaliers et mensuels sont exacts ; le tarif est déterminé selon l'heure réelle de chauffe.",
+    "cost": "Coût",
+    "cost_text": "Chaque kWh est valorisé au prix du tarif en vigueur au moment où il a été compté."
+  },
+  "days": {
+    "mon": "Lundi",
+    "tue": "Mardi",
+    "wed": "Mercredi",
+    "thu": "Jeudi",
+    "fri": "Vendredi",
+    "sat": "Samedi",
+    "sun": "Dimanche"
+  }
+}

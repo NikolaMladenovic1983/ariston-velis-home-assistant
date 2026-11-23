@@ -35,6 +35,7 @@ from .const import (
     DOMAIN,
     MAX_BACKUPS,
     SCAN_INTERVAL,
+    translated_error,
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -243,27 +244,25 @@ class AristonScheduleCoordinator(DataUpdateCoordinator[ScheduleData]):
         try:
             new_api = sm.week_to_api(week)
         except sm.ScheduleError as err:
-            raise HomeAssistantError(f"Neispravan raspored: {err}") from err
+            raise translated_error(err.code, **err.placeholders) from err
         try:
             current = await self.api.get_schedule(self.gw)
         except AristonApiError as err:
-            raise HomeAssistantError(f"Ne mogu da pročitam trenutni raspored: {err}") from err
+            raise translated_error("read_failed", error=err) from err
 
         if sm.normalize_api(current) == sm.normalize_api(new_api):
             return {"changed": False, "schedule": sm.describe_week(sm.week_from_api(current))}
 
         backup = await self.hass.async_add_executor_job(self._backup, current, "pre-write")
-        _LOGGER.info("Upis rasporeda (%s). Backup: %s. Novi: %s", reason, backup.name, new_api)
+        _LOGGER.info("Writing schedule (%s). Backup: %s. New: %s", reason, backup.name, new_api)
         try:
             await self.api.set_schedule(self.gw, new_api)
             after = await self.api.get_schedule(self.gw)
         except AristonApiError as err:
-            raise HomeAssistantError(f"Upis rasporeda nije uspeo: {err} (backup: {backup.name})") from err
+            raise translated_error("write_failed", error=err, backup=backup.name) from err
 
         if sm.normalize_api(after) != sm.normalize_api(new_api):
-            raise HomeAssistantError(
-                f"Ariston je prihvatio upis, ali pročitani raspored se razlikuje. Backup: {backup.name}"
-            )
+            raise translated_error("verify_failed", backup=backup.name)
         self._last_write = f"{dt_util.now():%Y-%m-%d %H:%M} ({reason})"
         await self.async_request_refresh()
         return {

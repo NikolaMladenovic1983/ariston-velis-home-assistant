@@ -1,0 +1,179 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Account Ariston",
+        "description": "La stessa email e la stessa password dell'app ufficiale Ariston NET.",
+        "data": {
+          "username": "Email",
+          "password": "Password"
+        }
+      },
+      "device": {
+        "title": "Seleziona lo scaldabagno",
+        "data": {
+          "gateway_id": "Scaldabagno"
+        }
+      }
+    },
+    "error": {
+      "invalid_auth": "Email o password non validi",
+      "cannot_connect": "Impossibile connettersi al server Ariston",
+      "no_devices": "Nessuno scaldabagno Velis in questo account"
+    },
+    "abort": {
+      "already_configured": "Questo scaldabagno è già configurato"
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Fascia economica",
+        "description": "Ore della tariffa elettrica economica (fascia ridotta), usate per i sensori di consumo e di costo.",
+        "data": {
+          "cheap_start_hour": "Inizio (ora)",
+          "cheap_end_hour": "Fine (ora)"
+        }
+      }
+    }
+  },
+  "device": {
+    "boiler_schedule": {
+      "name": "Programma scaldabagno"
+    }
+  },
+  "entity": {
+    "sensor": {
+      "schedule": {
+        "name": "Programma"
+      },
+      "next_slot": {
+        "name": "Prossima fascia"
+      },
+      "energy_24h": {
+        "name": "Consumo ultime 24 h"
+      },
+      "energy_cheap_24h": {
+        "name": "Consumo in fascia economica 24 h"
+      },
+      "cheap_share_24h": {
+        "name": "Quota fascia economica 24 h"
+      },
+      "energy_7d": {
+        "name": "Consumo ultimi 7 giorni"
+      },
+      "energy_total": {
+        "name": "Consumo totale"
+      },
+      "energy_cheap": {
+        "name": "Consumo totale fascia economica"
+      },
+      "energy_expensive": {
+        "name": "Consumo totale fascia piena"
+      },
+      "cost_cheap": {
+        "name": "Costo fascia economica"
+      },
+      "cost_expensive": {
+        "name": "Costo fascia piena"
+      },
+      "cost_total": {
+        "name": "Costo totale"
+      },
+      "export_xlsx": {
+        "name": "Report Excel"
+      }
+    }
+  },
+  "exceptions": {
+    "not_loaded": {
+      "message": "L'integrazione Programma Ariston non è caricata"
+    },
+    "invalid_time": {
+      "message": "Orario non valido: {value} (atteso HH:MM)"
+    },
+    "invalid_day": {
+      "message": "Giorno non valido: {value}"
+    },
+    "no_days": {
+      "message": "Non è stato indicato alcun giorno"
+    },
+    "temp_and_showers": {
+      "message": "{time}: indica una temperatura oppure un numero di docce, non entrambi"
+    },
+    "temp_range": {
+      "message": "{time}: la temperatura {temp} °C è fuori dall'intervallo {min}–{max} °C"
+    },
+    "showers_range": {
+      "message": "{time}: il numero di docce deve essere 1–{max}"
+    },
+    "duplicate_time": {
+      "message": "{day}: due fasce alla stessa ora"
+    },
+    "too_many_slots": {
+      "message": "{day}: al massimo {max} fasce al giorno"
+    },
+    "empty_schedule": {
+      "message": "Il programma non può essere completamente vuoto"
+    },
+    "read_failed": {
+      "message": "Impossibile leggere il programma attuale: {error}"
+    },
+    "write_failed": {
+      "message": "Scrittura del programma non riuscita: {error} (backup: {backup})"
+    },
+    "verify_failed": {
+      "message": "Ariston ha accettato la scrittura, ma il programma riletto è diverso. Backup: {backup}"
+    },
+    "no_backups": {
+      "message": "Non ci sono backup salvati"
+    },
+    "backup_missing": {
+      "message": "Il backup {name} non esiste. Disponibili: {available}"
+    }
+  },
+  "services": {
+    "set_days": {
+      "name": "Imposta il programma per alcuni giorni",
+      "description": "Sostituisce le fasce dei giorni scelti (gli altri giorni restano invariati). Prima della scrittura viene creato un backup e poi il risultato viene verificato.",
+      "fields": {
+        "days": {
+          "name": "Giorni",
+          "description": "all, workdays, weekend, mon…sun oppure 0–6 (0 = domenica)"
+        },
+        "slots": {
+          "name": "Fasce",
+          "description": "Elenco delle fasce: [{\"time\": \"06:00\", \"temp\": 75}] oppure [{\"time\": \"07:00\", \"showers\": 2}]. Orario = quando l'acqua deve essere pronta."
+        }
+      }
+    },
+    "set_schedule": {
+      "name": "Imposta l'intero programma",
+      "description": "Sostituisce l'intero programma settimanale. I giorni non elencati restano senza fasce.",
+      "fields": {
+        "plans": {
+          "name": "Piani",
+          "description": "[{\"days\": \"workdays\", \"slots\": [...]}, {\"days\": \"weekend\", \"slots\": [...]}]"
+        }
+      }
+    },
+    "restore_backup": {
+      "name": "Ripristina il programma da backup",
+      "description": "Senza nome di file ripristina il programma com'era prima dell'ultima modifica.",
+      "fields": {
+        "file": {
+          "name": "File",
+          "description": "Nome del file di backup in /config/ariston_schedule_backups"
+        }
+      }
+    },
+    "refresh": {
+      "name": "Aggiorna",
+      "description": "Leggi subito il programma e il consumo dal server Ariston."
+    },
+    "export_xlsx": {
+      "name": "Crea report Excel",
+      "description": "Crea un file .xlsx con il consumo (kWh) e il costo per fascia, per mese, giorno e ora. Il link si trova nel sensore \"Report Excel\"."
+    }
+  }
+}

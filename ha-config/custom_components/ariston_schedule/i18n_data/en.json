@@ -1,0 +1,41 @@
+{
+  "language_name": "English",
+  "excel": {
+    "file_name": "boiler_consumption.xlsx",
+    "sheet_month": "By month",
+    "sheet_day": "By day",
+    "sheet_hour": "By hour",
+    "sheet_info": "Info",
+    "col_month": "Month",
+    "col_date": "Date",
+    "col_hour": "Hour (start)",
+    "kwh_cheap": "kWh cheap",
+    "kwh_expensive": "kWh expensive",
+    "kwh_total": "kWh total",
+    "cur_cheap": "{cur} cheap",
+    "cur_expensive": "{cur} expensive",
+    "cur_total": "{cur} total",
+    "share": "Cheap share",
+    "total": "Total",
+    "item": "Item",
+    "value": "Value",
+    "created": "Created",
+    "cheap_hours": "Cheap tariff",
+    "price_cheap": "Price cheap ({cur}/kWh)",
+    "price_expensive": "Price expensive ({cur}/kWh)",
+    "total_since": "Total since measuring started (kWh)",
+    "note": "Note",
+    "note_text": "Ariston reports consumption 1–3 h late; the \"{sheet}\" sheet shows the hour in which the consumption was counted (only hours with consumption). Daily and monthly totals are exact; the tariff is determined by the actual heating time.",
+    "cost": "Cost",
+    "cost_text": "Each kWh is priced at the tariff price valid when it was counted."
+  },
+  "days": {
+    "mon": "Monday",
+    "tue": "Tuesday",
+    "wed": "Wednesday",
+    "thu": "Thursday",
+    "fri": "Friday",
+    "sat": "Saturday",
+    "sun": "Sunday"
+  }
+}

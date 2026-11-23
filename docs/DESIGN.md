@@ -122,7 +122,7 @@ writes its own `.xlsx` with `xlsx_writer.py`, which needs no dependencies. The w
 by month, by day, by hour, and info. Each has a frozen header, filters, real date and number types, and a
 totals row with `SUM` formulas.
 
-- The file is written to `/config/www/bojler-<random token>/bojler_potrosnja.xlsx`.
+- The file is written to `/config/www/bojler-<random token>/<localized file name>.xlsx`.
 - The link is in the `url` attribute of `sensor.bojler_raspored_excel_izvestaj`.
 - `/local` is not behind HA login. The random token makes the URL unguessable, so keep HA reachable only
   through your private network.
@@ -141,7 +141,28 @@ totals row with `SUM` formulas.
 - Energy cards have no color per source. The theme sets `--energy-grid-consumption-color-0/-1` and defines
   both `light` and `dark` modes, because a theme without `modes` forces light mode.
 
-## 8. Google Home
+## 8. Internationalisation
+
+- **Single source:** `i18n/<lang>.yaml` (en, de, fr, it, es, ru, sr-Latn), with `en` as the reference.
+  `tools/i18n_build.py` validates the catalogs (same keys, same `{placeholders}`) and generates every
+  output. Serbian Cyrillic (`sr`) is transliterated from `sr-Latn`. Placeholders, units (`°C`, `kWh`, `h`),
+  brand names, paths and code samples stay in Latin script.
+- **Dashboard:** the YAML dashboard only says `strategy: {type: custom:bojler}`.
+  - The integration serves `frontend/bojler-dashboard.js` + `frontend/i18n.js` as a static path and
+    registers it with `frontend.add_extra_js_url`.
+  - The strategy builds the whole dashboard at runtime in the language of the user's profile
+    (`hass.locale.language`, with English as the fallback). Every card gets an explicit translated name.
+  - View paths, entity IDs and actions are identical in every language, which a test checks.
+- **Integration:**
+  - Entity and device names, config/options flows, services and exceptions use standard HA translations
+    (`translation_key`). Errors are raised with translation keys (`ScheduleError(code, **placeholders)`).
+  - Entity IDs are fixed in code, so they don't depend on the HA system language.
+  - Attributes are language-neutral (days `mon`…`sun`).
+- **Backend texts** (notifications, persistent notifications, the Excel report): the backend does not know
+  each user's language, so they use `input_select.bojler_jezik`. Notifications use a generated Jinja macro
+  (`custom_templates/bojler_i18n.jinja`); the Excel export reads `i18n_data/<lang>.json`.
+
+## 9. Google Home
 
 - Only `switch.bojler_rucno_grejanje` is exposed, as "Boiler". Turning it on from Google always heats to
   70 °C: an automation on the `google_assistant_command` event sets the target slider before the command runs.
@@ -152,7 +173,7 @@ totals row with `SUM` formulas.
 - **Report State** (HomeGraph API with a service account) is required. Without it, Google Home shows the
   old state for about 30 s after every command.
 
-## 9. Home Assistant quirks (2026.11)
+## 10. Home Assistant quirks (2026.11)
 
 - HTTP and reverse-proxy settings live in `.storage/http`, and a YAML `http:` block is ignored. Change them
   via websocket `http/config/configure` + `http/config/promote` (`tools/ha_http_config.py`).

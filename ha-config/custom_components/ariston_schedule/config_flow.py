@@ -65,7 +65,7 @@ class AristonScheduleConfigFlow(ConfigFlow, domain=DOMAIN):
         await self.async_set_unique_id(gw)
         self._abort_if_unique_id_configured()
         return self.async_create_entry(
-            title=f"Raspored {self._plants[gw]}", data={**self._creds, CONF_GW: gw}
+            title=f"Ariston Velis {self._plants[gw]}", data={**self._creds, CONF_GW: gw}
         )
 
     @staticmethod

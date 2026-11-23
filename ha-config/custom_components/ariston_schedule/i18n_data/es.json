@@ -1,0 +1,41 @@
+{
+  "language_name": "Español",
+  "excel": {
+    "file_name": "termo_consumo.xlsx",
+    "sheet_month": "Por mes",
+    "sheet_day": "Por día",
+    "sheet_hour": "Por hora",
+    "sheet_info": "Info",
+    "col_month": "Mes",
+    "col_date": "Fecha",
+    "col_hour": "Hora (inicio)",
+    "kwh_cheap": "kWh valle",
+    "kwh_expensive": "kWh punta",
+    "kwh_total": "kWh total",
+    "cur_cheap": "{cur} valle",
+    "cur_expensive": "{cur} punta",
+    "cur_total": "{cur} total",
+    "share": "Proporción valle",
+    "total": "Total",
+    "item": "Concepto",
+    "value": "Valor",
+    "created": "Creado",
+    "cheap_hours": "Tarifa valle",
+    "price_cheap": "Precio valle ({cur}/kWh)",
+    "price_expensive": "Precio punta ({cur}/kWh)",
+    "total_since": "Total desde el inicio de las mediciones (kWh)",
+    "note": "Nota",
+    "note_text": "Ariston informa del consumo con 1–3 h de retraso; la hoja «{sheet}» muestra la hora en que se contabilizó el consumo (solo las horas con consumo). Los totales diarios y mensuales son exactos; la tarifa se determina según la hora real de calentamiento.",
+    "cost": "Coste",
+    "cost_text": "Cada kWh se valora al precio de la tarifa vigente en el momento en que se contabilizó."
+  },
+  "days": {
+    "mon": "Lunes",
+    "tue": "Martes",
+    "wed": "Miércoles",
+    "thu": "Jueves",
+    "fri": "Viernes",
+    "sat": "Sábado",
+    "sun": "Domingo"
+  }
+}

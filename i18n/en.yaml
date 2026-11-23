@@ -1,0 +1,257 @@
+# English — reference catalog. Every other language must have exactly the same keys
+# (checked by tests/test_i18n.py). Placeholders in {braces} must be kept as they are.
+# After editing run:  python tools/i18n_build.py
+language_name: English
+
+# Home Assistant translations of the ariston_schedule integration (translations/<lang>.json)
+integration:
+  config:
+    step:
+      user:
+        title: Ariston account
+        description: The same email and password as in the official Ariston NET app.
+        data:
+          username: Email
+          password: Password
+      device:
+        title: Select the water heater
+        data:
+          gateway_id: Water heater
+    error:
+      invalid_auth: Invalid email or password
+      cannot_connect: Cannot connect to the Ariston server
+      no_devices: There is no Velis water heater on this account
+    abort:
+      already_configured: This water heater is already configured
+  options:
+    step:
+      init:
+        title: Cheap tariff
+        description: Hours of the cheap (lower) electricity tariff, used for the consumption and cost sensors.
+        data:
+          cheap_start_hour: Start (hour)
+          cheap_end_hour: End (hour)
+  device:
+    boiler_schedule:
+      name: Boiler schedule
+  entity:
+    sensor:
+      schedule: {name: Schedule}
+      next_slot: {name: Next slot}
+      energy_24h: {name: Consumption last 24h}
+      energy_cheap_24h: {name: Cheap-tariff consumption 24h}
+      cheap_share_24h: {name: Cheap-tariff share 24h}
+      energy_7d: {name: Consumption last 7 days}
+      energy_total: {name: Total consumption}
+      energy_cheap: {name: Total consumption cheap tariff}
+      energy_expensive: {name: Total consumption expensive tariff}
+      cost_cheap: {name: Cost cheap tariff}
+      cost_expensive: {name: Cost expensive tariff}
+      cost_total: {name: Total cost}
+      export_xlsx: {name: Excel report}
+  exceptions:
+    not_loaded: {message: The Ariston schedule integration is not loaded}
+    invalid_time: {message: "Invalid time: {value} (expected HH:MM)"}
+    invalid_day: {message: "Invalid day: {value}"}
+    no_days: {message: No day was given}
+    temp_and_showers: {message: "{time}: set either a temperature or a number of showers, not both"}
+    temp_range: {message: "{time}: temperature {temp} °C is outside {min}–{max} °C"}
+    showers_range: {message: "{time}: the number of showers must be 1–{max}"}
+    duplicate_time: {message: "{day}: two slots at the same time"}
+    too_many_slots: {message: "{day}: at most {max} slots per day"}
+    empty_schedule: {message: The schedule cannot be completely empty}
+    read_failed: {message: "Cannot read the current schedule: {error}"}
+    write_failed: {message: "Writing the schedule failed: {error} (backup: {backup})"}
+    verify_failed: {message: "Ariston accepted the write, but the schedule read back is different. Backup: {backup}"}
+    no_backups: {message: There are no saved backups}
+    backup_missing: {message: "Backup {name} does not exist. Available: {available}"}
+  services:
+    set_days:
+      name: Set schedule for days
+      description: Replaces the slots of the selected days (other days stay the same). A backup is made before writing and the result is verified.
+      fields:
+        days:
+          name: Days
+          description: "all, workdays, weekend, mon…sun or 0–6 (0 = Sunday)"
+        slots:
+          name: Slots
+          description: 'List of slots: [{"time": "06:00", "temp": 75}] or [{"time": "07:00", "showers": 2}]. Time = when the water should be ready.'
+    set_schedule:
+      name: Set the whole schedule
+      description: Replaces the whole weekly schedule. Days that are not listed get no slots.
+      fields:
+        plans:
+          name: Plans
+          description: '[{"days": "workdays", "slots": [...]}, {"days": "weekend", "slots": [...]}]'
+    restore_backup:
+      name: Restore schedule from backup
+      description: Without a file name it restores the schedule as it was before the last change.
+      fields:
+        file:
+          name: File
+          description: Backup file name from /config/ariston_schedule_backups
+    refresh:
+      name: Refresh
+      description: Read the schedule and the consumption from the Ariston server now.
+    export_xlsx:
+      name: Create Excel report
+      description: Creates an .xlsx file with consumption (kWh) and cost per tariff by month, day and hour. The link is in the "Excel report" sensor.
+
+days: {mon: Monday, tue: Tuesday, wed: Wednesday, thu: Thursday, fri: Friday, sat: Saturday, sun: Sunday}
+
+# Dashboard (generated at runtime in the language of the user's HA profile)
+dashboard:
+  title: Boiler
+  tab_home: Boiler
+  tab_usage: Consumption
+  tab_schedule: Schedule
+  tab_settings: Settings
+  badge_heating: Heating
+  badge_mode: Mode
+  badge_next: Next slot
+  mode_PROGRAM: Schedule
+  mode_MANUAL: Manual
+  mode_BOOST: Boost
+  h_water: Hot water
+  gauge_name: Water temperature
+  showers: Showers
+  target: Target
+  time_to_heat: Time to heat
+  h_manual: Manual heating
+  manual_switch: Heat now (outside the schedule)
+  manual_confirm: "On: heats right away to the selected temperature (daytime electricity is more expensive), then returns to the schedule by itself. Off: back to the schedule immediately."
+  manual_confirm_short: Turn manual heating on or off?
+  heat_to: Heat to
+  h_cost: Cost
+  cheap_24h: Cheap 24h
+  today: Today
+  this_month: This month
+  h_usage: Consumption and cost
+  table_title: kWh and cost per tariff
+  usage_graph: Consumption per tariff
+  excel_link: Download Excel (.xlsx)
+  excel_desc: "By month, day and hour · kWh and cost per tariff · updated {time}"
+  excel_pending: The Excel report is being prepared…
+  refresh: Refresh
+  h_monthly: By month
+  cost_by_month: "Cost by month ({cur})"
+  kwh_by_month: Consumption by month (kWh)
+  cheap: Cheap tariff
+  expensive: Expensive tariff
+  h_habits: Heating habits
+  cheap_share: Cheap-tariff share (24h)
+  temp_48h: Water temperature (48 h)
+  water: Water
+  heating: Heating
+  lag_note: Ariston reports consumption 1–3 h late, so per hour it appears later than the actual heating. Daily and monthly totals are exact; the tariff is determined by the actual heating time.
+  h_schedule: Schedule in the boiler
+  every_day: Every day
+  weekdays: Weekdays
+  weekend: Weekend
+  schedule_note: Time = when the water should be ready; the boiler starts heating earlier by itself.
+  cheap_tariff: Cheap tariff
+  last_change: Last change
+  next_slot: Next slot
+  h_edit: Edit
+  form_diff: The form differs from the schedule in the boiler
+  form_diff_confirm: Load the schedule from the boiler into the form? Changes in the form are discarded.
+  form_diff_note: '"Apply" would write the values from the form. If that is not what you want, tap the warning or "Load current".'
+  weekdays_title: Weekdays (Mon–Fri)
+  weekend_title: Weekend (Sat–Sun)
+  slot1: Slot 1
+  temp1: Temperature 1
+  second_slot: Second slot
+  slot2: Slot 2
+  temp2: Temperature 2
+  load_current: Load current
+  apply: Apply
+  apply_confirm: Write the schedule from the form to the boiler? A backup is made before writing.
+  undo: Restore previous
+  undo_confirm: Restore the schedule as it was before the last change?
+  h_prices: Electricity prices
+  price_cheap: "Cheap tariff ({cur}/kWh)"
+  price_expensive: "Expensive tariff ({cur}/kWh)"
+  price_note: A new price applies to consumption counted from the moment of the change; amounts already counted do not change.
+  notify_language: Language of notifications and the Excel report
+  totals_title: Total since measuring started
+  total_kwh: Consumption
+  total_cheap: "– cheap tariff"
+  total_expensive: "– expensive tariff"
+  total_cost: Cost
+  h_advanced: Advanced
+  mode: Mode
+  back_to_schedule: Back to schedule
+  boost: BOOST (fastest)
+  boost_confirm: BOOST heats at full power right away (daytime electricity is more expensive). Start it?
+  power: Power
+  eco: Eco
+  errors: Errors
+  antileg: Anti-legionella
+  antileg_on: on ✅
+  antileg_off: "⚠️ OFF — switch it on in the official Ariston app"
+  max_temp: Max. temperature
+  readonly_note: These settings are intentionally not changed from the dashboard.
+
+# Notifications and script messages (language chosen in Settings → notification language)
+notify:
+  mode_PROGRAM: schedule
+  mode_MANUAL: manual
+  mode_BOOST: BOOST
+  morning_title: Boiler – morning
+  morning_msg: "Water {temp} °C, {showers} shower(s). Used in the cheap tariff overnight: {cheap} kWh (24h share: {share} %)."
+  ready_title: Boiler – water ready
+  ready_msg: "Heating finished: {temp} °C, {showers} shower(s)."
+  expensive_title: The boiler is heating in the expensive tariff
+  expensive_msg: "Heating since {since} (water {temp} °C, mode: {mode})."
+  low_title: Boiler – little hot water
+  low_msg: "The water is {temp} °C. Turn on BOOST (expensive tariff)?"
+  boost_button: BOOST
+  boost_on: BOOST is on.
+  boost_long_title: Boiler – BOOST
+  boost_long_msg: BOOST has been on for 2 hours. Switch back to the schedule from the dashboard?
+  conn_title: Boiler – connection
+  conn_lost: "No data from the Ariston server for 30 min ({name}). The boiler keeps running on its built-in schedule."
+  conn_back: Data from the Ariston server is arriving again.
+  manual_title: Boiler – manual heating finished
+  manual_reached: "Water heated to {temp} °C (target {target} °C)."
+  manual_already: "The water is already {temp} °C, so heating to {target} °C is not needed."
+  manual_timeout: "Manual heating ran for 4 h and was stopped (water {temp} °C)."
+  manual_back: The boiler is back on the schedule.
+  antileg_title: Boiler – anti-legionella OFF
+  antileg_msg: Legionella protection has just been switched off. If this was not intended, switch it on in the official Ariston app.
+  error_title: Boiler – ERROR
+  error_msg: "The boiler reports an error (error count: {count}). Check the boiler display or the official app."
+  sched_title: Boiler – schedule
+  sched_written: "Schedule written and verified. Weekdays: {weekdays}. Weekend: {weekend}. (backup: {backup})"
+  sched_unchanged: The schedule is already like this, so nothing was changed.
+  sched_restored: "Schedule restored from {file}."
+
+# Excel report (same language as notifications)
+excel:
+  file_name: boiler_consumption.xlsx
+  sheet_month: By month
+  sheet_day: By day
+  sheet_hour: By hour
+  sheet_info: Info
+  col_month: Month
+  col_date: Date
+  col_hour: Hour (start)
+  kwh_cheap: kWh cheap
+  kwh_expensive: kWh expensive
+  kwh_total: kWh total
+  cur_cheap: "{cur} cheap"
+  cur_expensive: "{cur} expensive"
+  cur_total: "{cur} total"
+  share: Cheap share
+  total: Total
+  item: Item
+  value: Value
+  created: Created
+  cheap_hours: Cheap tariff
+  price_cheap: "Price cheap ({cur}/kWh)"
+  price_expensive: "Price expensive ({cur}/kWh)"
+  total_since: Total since measuring started (kWh)
+  note: Note
+  note_text: 'Ariston reports consumption 1–3 h late; the "{sheet}" sheet shows the hour in which the consumption was counted (only hours with consumption). Daily and monthly totals are exact; the tariff is determined by the actual heating time.'
+  cost: Cost
+  cost_text: Each kWh is priced at the tariff price valid when it was counted.

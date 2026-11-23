@@ -30,28 +30,48 @@ async def async_setup_entry(hass: HomeAssistant, entry, async_add_entities: AddC
         CheapConsumption24hSensor(coord),
         CheapShareSensor(coord),
         Consumption7dSensor(coord),
-        CumulativeEnergySensor(coord, "total", "Ukupna potrošnja"),
-        CumulativeEnergySensor(coord, "cheap", "Ukupna potrošnja jeftina tarifa"),
-        CumulativeEnergySensor(coord, "expensive", "Ukupna potrošnja skupa tarifa"),
-        CumulativeCostSensor(coord, "cost_cheap", "Trošak jeftina tarifa"),
-        CumulativeCostSensor(coord, "cost_expensive", "Trošak skupa tarifa"),
-        CumulativeCostSensor(coord, "cost_total", "Trošak ukupno"),
+        CumulativeEnergySensor(coord, "total"),
+        CumulativeEnergySensor(coord, "cheap"),
+        CumulativeEnergySensor(coord, "expensive"),
+        CumulativeCostSensor(coord, "cost_cheap"),
+        CumulativeCostSensor(coord, "cost_expensive"),
+        CumulativeCostSensor(coord, "cost_total"),
         ExportSensor(coord),
     ])
+
+
+# Entity IDs are fixed (independent of the HA system language), because packages and the dashboard
+# reference them. Names are translated via translation_key (translations/<lang>.json, entity.sensor.*).
+OBJECT_IDS = {
+    "schedule": "raspored",
+    "next_slot": "sledeci_termin",
+    "energy_24h": "potrosnja_poslednja_24h",
+    "energy_cheap_24h": "potrosnja_u_jeftinoj_tarifi_24h",
+    "cheap_share_24h": "udeo_jeftine_tarife_24h",
+    "energy_7d": "potrosnja_7_dana",
+    "energy_total": "ukupna_potrosnja",
+    "energy_cheap": "ukupna_potrosnja_jeftina_tarifa",
+    "energy_expensive": "ukupna_potrosnja_skupa_tarifa",
+    "cost_cheap": "trosak_jeftina_tarifa",
+    "cost_expensive": "trosak_skupa_tarifa",
+    "cost_total": "trosak_ukupno",
+    "export_xlsx": "excel_izvestaj",
+}
 
 
 class _Base(CoordinatorEntity[AristonScheduleCoordinator], SensorEntity):
     _attr_has_entity_name = True
 
-    def __init__(self, coord: AristonScheduleCoordinator, key: str, name: str) -> None:
+    def __init__(self, coord: AristonScheduleCoordinator, key: str, translation_key: str) -> None:
         super().__init__(coord)
         self._attr_unique_id = f"{coord.gw}_{key}"
-        self._attr_name = name
+        self._attr_translation_key = translation_key
+        self.entity_id = f"sensor.bojler_raspored_{OBJECT_IDS[translation_key]}"
         self._attr_device_info = DeviceInfo(
             identifiers={(DOMAIN, coord.gw)},
-            name="Bojler raspored",
+            translation_key="boiler_schedule",
             manufacturer="Ariston",
-            model="Velis Pro WiFi 80L",
+            model="Velis",
         )
 
     def _cheap_hours(self) -> tuple[int, int]:
@@ -68,15 +88,15 @@ class ScheduleSensor(_Base):
     _attr_icon = "mdi:calendar-clock"
 
     def __init__(self, coord: AristonScheduleCoordinator) -> None:
-        super().__init__(coord, "schedule", "Raspored")
+        super().__init__(coord, "schedule", "schedule")
 
     @property
     def native_value(self) -> str | None:
         nxt = sm.next_slot(self.coordinator.data.week, dt_util.now())
         if not nxt:
-            return "prazan"
+            return "—"
         when, slot = nxt
-        return f"{sm.DAY_NAMES_SR[(when.weekday() + 1) % 7][:3]} {slot.describe()}"
+        return f"{when:%a} {slot.describe()}"  # language-neutral; the dashboard shows translated text
 
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
@@ -95,7 +115,7 @@ class NextSlotSensor(_Base):
     _attr_icon = "mdi:clock-start"
 
     def __init__(self, coord: AristonScheduleCoordinator) -> None:
-        super().__init__(coord, "next_slot", "Sledeći termin")
+        super().__init__(coord, "next_slot", "next_slot")
 
     @property
     def native_value(self) -> dt.datetime | None:
@@ -120,7 +140,7 @@ class Consumption24hSensor(_EnergyBase):
     _attr_icon = "mdi:lightning-bolt"
 
     def __init__(self, coord: AristonScheduleCoordinator) -> None:
-        super().__init__(coord, "energy_24h", "Potrošnja poslednja 24h")
+        super().__init__(coord, "energy_24h", "energy_24h")
 
     @property
     def native_value(self) -> float:
@@ -142,7 +162,7 @@ class CheapConsumption24hSensor(_EnergyBase):
     _attr_icon = "mdi:cash-check"
 
     def __init__(self, coord: AristonScheduleCoordinator) -> None:
-        super().__init__(coord, "energy_cheap_24h", "Potrošnja u jeftinoj tarifi 24h")
+        super().__init__(coord, "energy_cheap_24h", "energy_cheap_24h")
 
     @property
     def native_value(self) -> float:
@@ -156,7 +176,7 @@ class CheapShareSensor(_Base):
     _attr_suggested_display_precision = 0
 
     def __init__(self, coord: AristonScheduleCoordinator) -> None:
-        super().__init__(coord, "cheap_share_24h", "Udeo jeftine tarife 24h")
+        super().__init__(coord, "cheap_share_24h", "cheap_share_24h")
 
     @property
     def native_value(self) -> float | None:
@@ -170,7 +190,7 @@ class Consumption7dSensor(_EnergyBase):
     _attr_icon = "mdi:calendar-week"
 
     def __init__(self, coord: AristonScheduleCoordinator) -> None:
-        super().__init__(coord, "energy_7d", "Potrošnja 7 dana")
+        super().__init__(coord, "energy_7d", "energy_7d")
 
     @property
     def native_value(self) -> float:
@@ -190,8 +210,8 @@ class CumulativeEnergySensor(_Base):
     _attr_suggested_display_precision = 2
     _attr_icon = "mdi:counter"
 
-    def __init__(self, coord: AristonScheduleCoordinator, kind: str, name: str) -> None:
-        super().__init__(coord, f"energy_cumulative_{kind}", name)
+    def __init__(self, coord: AristonScheduleCoordinator, kind: str) -> None:
+        super().__init__(coord, f"energy_cumulative_{kind}", f"energy_{kind}")
         self._kind = kind
 
     @property
@@ -210,8 +230,8 @@ class CumulativeCostSensor(_Base):
     _attr_suggested_display_precision = 2
     _attr_icon = "mdi:cash-multiple"
 
-    def __init__(self, coord: AristonScheduleCoordinator, kind: str, name: str) -> None:
-        super().__init__(coord, kind, name)
+    def __init__(self, coord: AristonScheduleCoordinator, kind: str) -> None:
+        super().__init__(coord, kind, kind)
         self._kind = kind
         self._attr_native_unit_of_measurement = coord.hass.config.currency
 
@@ -230,7 +250,7 @@ class ExportSensor(_Base):
     _attr_icon = "mdi:microsoft-excel"
 
     def __init__(self, coord: AristonScheduleCoordinator) -> None:
-        super().__init__(coord, "export_xlsx", "Excel izveštaj")
+        super().__init__(coord, "export_xlsx", "export_xlsx")
 
     @property
     def native_value(self) -> dt.datetime | None:

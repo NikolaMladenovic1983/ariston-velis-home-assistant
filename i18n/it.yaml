@@ -1,0 +1,250 @@
+language_name: Italiano
+
+integration:
+  config:
+    step:
+      user:
+        title: Account Ariston
+        description: La stessa email e la stessa password dell'app ufficiale Ariston NET.
+        data:
+          username: Email
+          password: Password
+      device:
+        title: Seleziona lo scaldabagno
+        data:
+          gateway_id: Scaldabagno
+    error:
+      invalid_auth: Email o password non validi
+      cannot_connect: Impossibile connettersi al server Ariston
+      no_devices: Nessuno scaldabagno Velis in questo account
+    abort:
+      already_configured: Questo scaldabagno è già configurato
+  options:
+    step:
+      init:
+        title: Fascia economica
+        description: Ore della tariffa elettrica economica (fascia ridotta), usate per i sensori di consumo e di costo.
+        data:
+          cheap_start_hour: Inizio (ora)
+          cheap_end_hour: Fine (ora)
+  device:
+    boiler_schedule:
+      name: Programma scaldabagno
+  entity:
+    sensor:
+      schedule: {name: Programma}
+      next_slot: {name: Prossima fascia}
+      energy_24h: {name: Consumo ultime 24 h}
+      energy_cheap_24h: {name: Consumo in fascia economica 24 h}
+      cheap_share_24h: {name: Quota fascia economica 24 h}
+      energy_7d: {name: Consumo ultimi 7 giorni}
+      energy_total: {name: Consumo totale}
+      energy_cheap: {name: Consumo totale fascia economica}
+      energy_expensive: {name: Consumo totale fascia piena}
+      cost_cheap: {name: Costo fascia economica}
+      cost_expensive: {name: Costo fascia piena}
+      cost_total: {name: Costo totale}
+      export_xlsx: {name: Report Excel}
+  exceptions:
+    not_loaded: {message: L'integrazione Programma Ariston non è caricata}
+    invalid_time: {message: "Orario non valido: {value} (atteso HH:MM)"}
+    invalid_day: {message: "Giorno non valido: {value}"}
+    no_days: {message: Non è stato indicato alcun giorno}
+    temp_and_showers: {message: "{time}: indica una temperatura oppure un numero di docce, non entrambi"}
+    temp_range: {message: "{time}: la temperatura {temp} °C è fuori dall'intervallo {min}–{max} °C"}
+    showers_range: {message: "{time}: il numero di docce deve essere 1–{max}"}
+    duplicate_time: {message: "{day}: due fasce alla stessa ora"}
+    too_many_slots: {message: "{day}: al massimo {max} fasce al giorno"}
+    empty_schedule: {message: Il programma non può essere completamente vuoto}
+    read_failed: {message: "Impossibile leggere il programma attuale: {error}"}
+    write_failed: {message: "Scrittura del programma non riuscita: {error} (backup: {backup})"}
+    verify_failed: {message: "Ariston ha accettato la scrittura, ma il programma riletto è diverso. Backup: {backup}"}
+    no_backups: {message: Non ci sono backup salvati}
+    backup_missing: {message: "Il backup {name} non esiste. Disponibili: {available}"}
+  services:
+    set_days:
+      name: Imposta il programma per alcuni giorni
+      description: Sostituisce le fasce dei giorni scelti (gli altri giorni restano invariati). Prima della scrittura viene creato un backup e poi il risultato viene verificato.
+      fields:
+        days:
+          name: Giorni
+          description: "all, workdays, weekend, mon…sun oppure 0–6 (0 = domenica)"
+        slots:
+          name: Fasce
+          description: 'Elenco delle fasce: [{"time": "06:00", "temp": 75}] oppure [{"time": "07:00", "showers": 2}]. Orario = quando l''acqua deve essere pronta.'
+    set_schedule:
+      name: Imposta l'intero programma
+      description: Sostituisce l'intero programma settimanale. I giorni non elencati restano senza fasce.
+      fields:
+        plans:
+          name: Piani
+          description: '[{"days": "workdays", "slots": [...]}, {"days": "weekend", "slots": [...]}]'
+    restore_backup:
+      name: Ripristina il programma da backup
+      description: Senza nome di file ripristina il programma com'era prima dell'ultima modifica.
+      fields:
+        file:
+          name: File
+          description: Nome del file di backup in /config/ariston_schedule_backups
+    refresh:
+      name: Aggiorna
+      description: Leggi subito il programma e il consumo dal server Ariston.
+    export_xlsx:
+      name: Crea report Excel
+      description: Crea un file .xlsx con il consumo (kWh) e il costo per fascia, per mese, giorno e ora. Il link si trova nel sensore "Report Excel".
+
+days: {mon: Lunedì, tue: Martedì, wed: Mercoledì, thu: Giovedì, fri: Venerdì, sat: Sabato, sun: Domenica}
+
+dashboard:
+  title: Scaldabagno
+  tab_home: Scaldabagno
+  tab_usage: Consumi
+  tab_schedule: Programma
+  tab_settings: Impostazioni
+  badge_heating: Riscalda
+  badge_mode: Modalità
+  badge_next: Prossima fascia
+  mode_PROGRAM: Programma
+  mode_MANUAL: Manuale
+  mode_BOOST: Boost
+  h_water: Acqua calda
+  gauge_name: Temperatura dell'acqua
+  showers: Docce
+  target: Obiettivo
+  time_to_heat: Al riscaldamento
+  h_manual: Riscaldamento manuale
+  manual_switch: Riscalda ora (fuori programma)
+  manual_confirm: "Acceso: riscalda subito fino alla temperatura scelta (di giorno l'elettricità costa di più), poi torna da solo al programma. Spento: torna subito al programma."
+  manual_confirm_short: Attivare o disattivare il riscaldamento manuale?
+  heat_to: Riscalda fino a
+  h_cost: Costo
+  cheap_24h: Fascia economica 24 h
+  today: Oggi
+  this_month: Questo mese
+  h_usage: Consumi e costi
+  table_title: kWh e costo per fascia
+  usage_graph: Consumo per fascia
+  excel_link: Scarica Excel (.xlsx)
+  excel_desc: "Per mese, giorno e ora · kWh e costo per fascia · aggiornato {time}"
+  excel_pending: Il report Excel è in preparazione…
+  refresh: Aggiorna
+  h_monthly: Per mese
+  cost_by_month: "Costo per mese ({cur})"
+  kwh_by_month: Consumo per mese (kWh)
+  cheap: Fascia economica
+  expensive: Fascia piena
+  h_habits: Abitudini di riscaldamento
+  cheap_share: Quota fascia economica (24 h)
+  temp_48h: Temperatura dell'acqua (48 h)
+  water: Acqua
+  heating: Riscalda
+  lag_note: Ariston comunica il consumo con 1–3 h di ritardo, quindi per ora compare più tardi del riscaldamento effettivo. I totali giornalieri e mensili sono esatti; la fascia è determinata dall'orario effettivo di riscaldamento.
+  h_schedule: Programma nello scaldabagno
+  every_day: Ogni giorno
+  weekdays: Giorni feriali
+  weekend: Fine settimana
+  schedule_note: Orario = quando l'acqua deve essere pronta; lo scaldabagno inizia a riscaldare prima da solo.
+  cheap_tariff: Fascia economica
+  last_change: Ultima modifica
+  next_slot: Prossima fascia
+  h_edit: Modifica
+  form_diff: Il modulo è diverso dal programma nello scaldabagno
+  form_diff_confirm: Caricare nel modulo il programma dello scaldabagno? Le modifiche nel modulo andranno perse.
+  form_diff_note: '"Applica" scriverebbe i valori del modulo. Se non è ciò che vuoi, tocca l''avviso oppure "Carica attuale".'
+  weekdays_title: Giorni feriali (lun–ven)
+  weekend_title: Fine settimana (sab–dom)
+  slot1: Fascia 1
+  temp1: Temperatura 1
+  second_slot: Seconda fascia
+  slot2: Fascia 2
+  temp2: Temperatura 2
+  load_current: Carica attuale
+  apply: Applica
+  apply_confirm: Scrivere nello scaldabagno il programma del modulo? Prima della scrittura viene creato un backup.
+  undo: Ripristina precedente
+  undo_confirm: Ripristinare il programma com'era prima dell'ultima modifica?
+  h_prices: Prezzi dell'elettricità
+  price_cheap: "Fascia economica ({cur}/kWh)"
+  price_expensive: "Fascia piena ({cur}/kWh)"
+  price_note: Un nuovo prezzo vale per il consumo conteggiato dal momento della modifica; gli importi già conteggiati non cambiano.
+  notify_language: Lingua delle notifiche e del report Excel
+  totals_title: Totale dall'inizio delle misure
+  total_kwh: Consumo
+  total_cheap: "– fascia economica"
+  total_expensive: "– fascia piena"
+  total_cost: Costo
+  h_advanced: Avanzate
+  mode: Modalità
+  back_to_schedule: Torna al programma
+  boost: BOOST (più veloce)
+  boost_confirm: BOOST riscalda subito alla massima potenza (di giorno l'elettricità costa di più). Avviare?
+  power: Acceso
+  eco: Eco
+  errors: Errori
+  antileg: Antilegionella
+  antileg_on: attiva ✅
+  antileg_off: "⚠️ DISATTIVATA — attivala nell'app ufficiale Ariston"
+  max_temp: Temperatura max.
+  readonly_note: Queste impostazioni volutamente non si modificano dalla dashboard.
+
+notify:
+  mode_PROGRAM: programma
+  mode_MANUAL: manuale
+  mode_BOOST: BOOST
+  morning_title: Scaldabagno – mattina
+  morning_msg: "Acqua a {temp} °C, {showers} doccia/e. Consumato stanotte in fascia economica: {cheap} kWh (quota 24 h: {share} %)."
+  ready_title: Scaldabagno – acqua pronta
+  ready_msg: "Riscaldamento terminato: {temp} °C, {showers} doccia/e."
+  expensive_title: Lo scaldabagno riscalda in fascia piena
+  expensive_msg: "Riscalda dalle {since} (acqua a {temp} °C, modalità: {mode})."
+  low_title: Scaldabagno – poca acqua calda
+  low_msg: "L'acqua è a {temp} °C. Attivare il BOOST (fascia piena)?"
+  boost_button: BOOST
+  boost_on: BOOST attivato.
+  boost_long_title: Scaldabagno – BOOST
+  boost_long_msg: Il BOOST è attivo da 2 ore. Tornare al programma dalla dashboard?
+  conn_title: Scaldabagno – connessione
+  conn_lost: "Nessun dato dal server Ariston da 30 min ({name}). Lo scaldabagno continua a funzionare con il programma integrato."
+  conn_back: I dati dal server Ariston arrivano di nuovo.
+  manual_title: Scaldabagno – riscaldamento manuale terminato
+  manual_reached: "Acqua riscaldata a {temp} °C (obiettivo {target} °C)."
+  manual_already: "L'acqua è già a {temp} °C, non serve riscaldare fino a {target} °C."
+  manual_timeout: "Il riscaldamento manuale è durato 4 h ed è stato interrotto (acqua a {temp} °C)."
+  manual_back: Lo scaldabagno è tornato al programma.
+  antileg_title: Scaldabagno – antilegionella DISATTIVATA
+  antileg_msg: La protezione antilegionella è appena stata disattivata. Se non era voluto, riattivala nell'app ufficiale Ariston.
+  error_title: Scaldabagno – ERRORE
+  error_msg: "Lo scaldabagno segnala un errore (numero di errori: {count}). Controlla il display dello scaldabagno o l'app ufficiale."
+  sched_title: Scaldabagno – programma
+  sched_written: "Programma scritto e verificato. Giorni feriali: {weekdays}. Fine settimana: {weekend}. (backup: {backup})"
+  sched_unchanged: Il programma è già così, non è stato modificato nulla.
+  sched_restored: "Programma ripristinato da {file}."
+
+excel:
+  file_name: scaldabagno_consumi.xlsx
+  sheet_month: Per mese
+  sheet_day: Per giorno
+  sheet_hour: Per ora
+  sheet_info: Info
+  col_month: Mese
+  col_date: Data
+  col_hour: Ora (inizio)
+  kwh_cheap: kWh fascia economica
+  kwh_expensive: kWh fascia piena
+  kwh_total: kWh totale
+  cur_cheap: "{cur} fascia economica"
+  cur_expensive: "{cur} fascia piena"
+  cur_total: "{cur} totale"
+  share: Quota fascia economica
+  total: Totale
+  item: Voce
+  value: Valore
+  created: Creato il
+  cheap_hours: Fascia economica
+  price_cheap: "Prezzo fascia economica ({cur}/kWh)"
+  price_expensive: "Prezzo fascia piena ({cur}/kWh)"
+  total_since: Totale dall'inizio delle misure (kWh)
+  note: Nota
+  note_text: 'Ariston comunica il consumo con 1–3 h di ritardo; il foglio "{sheet}" mostra l''ora in cui il consumo è stato conteggiato (solo le ore con consumo). I totali giornalieri e mensili sono esatti; la fascia è determinata dall''orario effettivo di riscaldamento.'
+  cost: Costo
+  cost_text: Ogni kWh è valorizzato al prezzo della fascia in vigore nel momento in cui è stato conteggiato.

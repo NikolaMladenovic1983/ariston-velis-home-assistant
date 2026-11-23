@@ -1,0 +1,179 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Compte Ariston",
+        "description": "La même adresse e-mail et le même mot de passe que dans l'application officielle Ariston NET.",
+        "data": {
+          "username": "E-mail",
+          "password": "Mot de passe"
+        }
+      },
+      "device": {
+        "title": "Choisir le chauffe-eau",
+        "data": {
+          "gateway_id": "Chauffe-eau"
+        }
+      }
+    },
+    "error": {
+      "invalid_auth": "E-mail ou mot de passe incorrect",
+      "cannot_connect": "Impossible de se connecter au serveur Ariston",
+      "no_devices": "Aucun chauffe-eau Velis sur ce compte"
+    },
+    "abort": {
+      "already_configured": "Ce chauffe-eau est déjà configuré"
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Heures creuses",
+        "description": "Heures du tarif d'électricité réduit (heures creuses), utilisées pour les capteurs de consommation et de coût.",
+        "data": {
+          "cheap_start_hour": "Début (heure)",
+          "cheap_end_hour": "Fin (heure)"
+        }
+      }
+    }
+  },
+  "device": {
+    "boiler_schedule": {
+      "name": "Programme du chauffe-eau"
+    }
+  },
+  "entity": {
+    "sensor": {
+      "schedule": {
+        "name": "Programme"
+      },
+      "next_slot": {
+        "name": "Prochain créneau"
+      },
+      "energy_24h": {
+        "name": "Consommation dernières 24 h"
+      },
+      "energy_cheap_24h": {
+        "name": "Consommation en heures creuses 24 h"
+      },
+      "cheap_share_24h": {
+        "name": "Part des heures creuses 24 h"
+      },
+      "energy_7d": {
+        "name": "Consommation 7 derniers jours"
+      },
+      "energy_total": {
+        "name": "Consommation totale"
+      },
+      "energy_cheap": {
+        "name": "Consommation totale heures creuses"
+      },
+      "energy_expensive": {
+        "name": "Consommation totale heures pleines"
+      },
+      "cost_cheap": {
+        "name": "Coût heures creuses"
+      },
+      "cost_expensive": {
+        "name": "Coût heures pleines"
+      },
+      "cost_total": {
+        "name": "Coût total"
+      },
+      "export_xlsx": {
+        "name": "Rapport Excel"
+      }
+    }
+  },
+  "exceptions": {
+    "not_loaded": {
+      "message": "L'intégration Programme Ariston n'est pas chargée"
+    },
+    "invalid_time": {
+      "message": "Heure invalide : {value} (format attendu HH:MM)"
+    },
+    "invalid_day": {
+      "message": "Jour invalide : {value}"
+    },
+    "no_days": {
+      "message": "Aucun jour n'a été indiqué"
+    },
+    "temp_and_showers": {
+      "message": "{time} : indiquez soit une température, soit un nombre de douches, pas les deux"
+    },
+    "temp_range": {
+      "message": "{time} : la température {temp} °C est hors de la plage {min}–{max} °C"
+    },
+    "showers_range": {
+      "message": "{time} : le nombre de douches doit être compris entre 1 et {max}"
+    },
+    "duplicate_time": {
+      "message": "{day} : deux créneaux à la même heure"
+    },
+    "too_many_slots": {
+      "message": "{day} : au maximum {max} créneaux par jour"
+    },
+    "empty_schedule": {
+      "message": "Le programme ne peut pas être entièrement vide"
+    },
+    "read_failed": {
+      "message": "Impossible de lire le programme actuel : {error}"
+    },
+    "write_failed": {
+      "message": "L'écriture du programme a échoué : {error} (sauvegarde : {backup})"
+    },
+    "verify_failed": {
+      "message": "Ariston a accepté l'écriture, mais le programme relu est différent. Sauvegarde : {backup}"
+    },
+    "no_backups": {
+      "message": "Aucune sauvegarde enregistrée"
+    },
+    "backup_missing": {
+      "message": "La sauvegarde {name} n'existe pas. Disponibles : {available}"
+    }
+  },
+  "services": {
+    "set_days": {
+      "name": "Définir le programme de certains jours",
+      "description": "Remplace les créneaux des jours choisis (les autres jours ne changent pas). Une sauvegarde est faite avant l'écriture et le résultat est vérifié.",
+      "fields": {
+        "days": {
+          "name": "Jours",
+          "description": "all, workdays, weekend, mon…sun ou 0–6 (0 = dimanche)"
+        },
+        "slots": {
+          "name": "Créneaux",
+          "description": "Liste des créneaux : [{\"time\": \"06:00\", \"temp\": 75}] ou [{\"time\": \"07:00\", \"showers\": 2}]. Heure = moment où l'eau doit être prête."
+        }
+      }
+    },
+    "set_schedule": {
+      "name": "Définir tout le programme",
+      "description": "Remplace tout le programme hebdomadaire. Les jours non indiqués n'ont aucun créneau.",
+      "fields": {
+        "plans": {
+          "name": "Plans",
+          "description": "[{\"days\": \"workdays\", \"slots\": [...]}, {\"days\": \"weekend\", \"slots\": [...]}]"
+        }
+      }
+    },
+    "restore_backup": {
+      "name": "Restaurer le programme depuis une sauvegarde",
+      "description": "Sans nom de fichier, restaure le programme tel qu'il était avant la dernière modification.",
+      "fields": {
+        "file": {
+          "name": "Fichier",
+          "description": "Nom du fichier de sauvegarde dans /config/ariston_schedule_backups"
+        }
+      }
+    },
+    "refresh": {
+      "name": "Actualiser",
+      "description": "Lire maintenant le programme et la consommation depuis le serveur Ariston."
+    },
+    "export_xlsx": {
+      "name": "Créer le rapport Excel",
+      "description": "Crée un fichier .xlsx avec la consommation (kWh) et le coût par tarif, par mois, jour et heure. Le lien se trouve dans le capteur « Rapport Excel »."
+    }
+  }
+}

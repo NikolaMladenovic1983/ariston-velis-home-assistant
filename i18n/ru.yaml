@@ -1,0 +1,250 @@
+language_name: Русский
+
+integration:
+  config:
+    step:
+      user:
+        title: Учётная запись Ariston
+        description: Те же адрес электронной почты и пароль, что и в официальном приложении Ariston NET.
+        data:
+          username: Электронная почта
+          password: Пароль
+      device:
+        title: Выбор водонагревателя
+        data:
+          gateway_id: Водонагреватель
+    error:
+      invalid_auth: Неверный адрес электронной почты или пароль
+      cannot_connect: Не удаётся подключиться к серверу Ariston
+      no_devices: В этой учётной записи нет водонагревателя Velis
+    abort:
+      already_configured: Этот водонагреватель уже настроен
+  options:
+    step:
+      init:
+        title: Ночной тариф
+        description: Часы дешёвого (ночного) тарифа на электроэнергию, используются датчиками потребления и стоимости.
+        data:
+          cheap_start_hour: Начало (час)
+          cheap_end_hour: Конец (час)
+  device:
+    boiler_schedule:
+      name: Расписание водонагревателя
+  entity:
+    sensor:
+      schedule: {name: Расписание}
+      next_slot: {name: Следующий интервал}
+      energy_24h: {name: Потребление за 24 ч}
+      energy_cheap_24h: {name: Потребление по ночному тарифу за 24 ч}
+      cheap_share_24h: {name: Доля ночного тарифа за 24 ч}
+      energy_7d: {name: Потребление за 7 дней}
+      energy_total: {name: Общее потребление}
+      energy_cheap: {name: Общее потребление по ночному тарифу}
+      energy_expensive: {name: Общее потребление по дневному тарифу}
+      cost_cheap: {name: Стоимость по ночному тарифу}
+      cost_expensive: {name: Стоимость по дневному тарифу}
+      cost_total: {name: Общая стоимость}
+      export_xlsx: {name: Отчёт Excel}
+  exceptions:
+    not_loaded: {message: Интеграция «Расписание Ariston» не загружена}
+    invalid_time: {message: "Неверное время: {value} (ожидается HH:MM)"}
+    invalid_day: {message: "Неверный день: {value}"}
+    no_days: {message: Не указан ни один день}
+    temp_and_showers: {message: "{time}: укажите либо температуру, либо количество душей, но не оба значения"}
+    temp_range: {message: "{time}: температура {temp} °C вне диапазона {min}–{max} °C"}
+    showers_range: {message: "{time}: количество душей должно быть 1–{max}"}
+    duplicate_time: {message: "{day}: два интервала в одно и то же время"}
+    too_many_slots: {message: "{day}: не более {max} интервалов в день"}
+    empty_schedule: {message: Расписание не может быть полностью пустым}
+    read_failed: {message: "Не удаётся прочитать текущее расписание: {error}"}
+    write_failed: {message: "Не удалось записать расписание: {error} (резервная копия: {backup})"}
+    verify_failed: {message: "Ariston принял запись, но прочитанное расписание отличается. Резервная копия: {backup}"}
+    no_backups: {message: Нет сохранённых резервных копий}
+    backup_missing: {message: "Резервная копия {name} не существует. Доступны: {available}"}
+  services:
+    set_days:
+      name: Задать расписание для дней
+      description: Заменяет интервалы выбранных дней (остальные дни не меняются). Перед записью создаётся резервная копия, после записи результат проверяется.
+      fields:
+        days:
+          name: Дни
+          description: "all, workdays, weekend, mon…sun или 0–6 (0 = воскресенье)"
+        slots:
+          name: Интервалы
+          description: 'Список интервалов: [{"time": "06:00", "temp": 75}] или [{"time": "07:00", "showers": 2}]. Время = когда вода должна быть готова.'
+    set_schedule:
+      name: Задать всё расписание
+      description: Заменяет всё недельное расписание. Дни, которые не указаны, остаются без интервалов.
+      fields:
+        plans:
+          name: Планы
+          description: '[{"days": "workdays", "slots": [...]}, {"days": "weekend", "slots": [...]}]'
+    restore_backup:
+      name: Восстановить расписание из резервной копии
+      description: Без имени файла восстанавливает расписание, каким оно было до последнего изменения.
+      fields:
+        file:
+          name: Файл
+          description: Имя файла резервной копии в /config/ariston_schedule_backups
+    refresh:
+      name: Обновить
+      description: Сейчас прочитать расписание и потребление с сервера Ariston.
+    export_xlsx:
+      name: Создать отчёт Excel
+      description: Создаёт файл .xlsx с потреблением (кВт·ч) и стоимостью по тарифам по месяцам, дням и часам. Ссылка находится в датчике «Отчёт Excel».
+
+days: {mon: Понедельник, tue: Вторник, wed: Среда, thu: Четверг, fri: Пятница, sat: Суббота, sun: Воскресенье}
+
+dashboard:
+  title: Водонагреватель
+  tab_home: Водонагреватель
+  tab_usage: Потребление
+  tab_schedule: Расписание
+  tab_settings: Настройки
+  badge_heating: Нагрев
+  badge_mode: Режим
+  badge_next: Следующий интервал
+  mode_PROGRAM: Расписание
+  mode_MANUAL: Ручной
+  mode_BOOST: Boost
+  h_water: Горячая вода
+  gauge_name: Температура воды
+  showers: Души
+  target: Цель
+  time_to_heat: До нагрева
+  h_manual: Ручной нагрев
+  manual_switch: Нагреть сейчас (вне расписания)
+  manual_confirm: "Вкл.: сразу нагревает до выбранной температуры (днём электроэнергия дороже), затем сам возвращается к расписанию. Выкл.: сразу возврат к расписанию."
+  manual_confirm_short: Включить или выключить ручной нагрев?
+  heat_to: Нагреть до
+  h_cost: Стоимость
+  cheap_24h: Ночной 24 ч
+  today: Сегодня
+  this_month: Этот месяц
+  h_usage: Потребление и стоимость
+  table_title: кВт·ч и стоимость по тарифам
+  usage_graph: Потребление по тарифам
+  excel_link: Скачать Excel (.xlsx)
+  excel_desc: "По месяцам, дням и часам · кВт·ч и стоимость по тарифам · обновлено {time}"
+  excel_pending: Отчёт Excel готовится…
+  refresh: Обновить
+  h_monthly: По месяцам
+  cost_by_month: "Стоимость по месяцам ({cur})"
+  kwh_by_month: Потребление по месяцам (кВт·ч)
+  cheap: Ночной тариф
+  expensive: Дневной тариф
+  h_habits: Привычки нагрева
+  cheap_share: Доля ночного тарифа (24 ч)
+  temp_48h: Температура воды (48 ч)
+  water: Вода
+  heating: Нагрев
+  lag_note: Ariston передаёт потребление с задержкой 1–3 ч, поэтому по часам оно появляется позже фактического нагрева. Суточные и месячные итоги точны; тариф определяется по фактическому времени нагрева.
+  h_schedule: Расписание в водонагревателе
+  every_day: Каждый день
+  weekdays: Будни
+  weekend: Выходные
+  schedule_note: Время = когда вода должна быть готова; водонагреватель сам начинает нагрев раньше.
+  cheap_tariff: Ночной тариф
+  last_change: Последнее изменение
+  next_slot: Следующий интервал
+  h_edit: Изменение
+  form_diff: Форма отличается от расписания в водонагревателе
+  form_diff_confirm: Загрузить в форму расписание из водонагревателя? Изменения в форме будут потеряны.
+  form_diff_note: «Применить» записало бы значения из формы. Если это не нужно, нажмите на предупреждение или «Загрузить текущее».
+  weekdays_title: Будни (пн–пт)
+  weekend_title: Выходные (сб–вс)
+  slot1: Интервал 1
+  temp1: Температура 1
+  second_slot: Второй интервал
+  slot2: Интервал 2
+  temp2: Температура 2
+  load_current: Загрузить текущее
+  apply: Применить
+  apply_confirm: Записать расписание из формы в водонагреватель? Перед записью создаётся резервная копия.
+  undo: Вернуть предыдущее
+  undo_confirm: Вернуть расписание, каким оно было до последнего изменения?
+  h_prices: Цены на электроэнергию
+  price_cheap: "Ночной тариф ({cur}/кВт·ч)"
+  price_expensive: "Дневной тариф ({cur}/кВт·ч)"
+  price_note: Новая цена применяется к потреблению, учтённому с момента изменения; уже учтённые суммы не меняются.
+  notify_language: Язык уведомлений и отчёта Excel
+  totals_title: Всего с начала измерений
+  total_kwh: Потребление
+  total_cheap: "– ночной тариф"
+  total_expensive: "– дневной тариф"
+  total_cost: Стоимость
+  h_advanced: Дополнительно
+  mode: Режим
+  back_to_schedule: Вернуться к расписанию
+  boost: BOOST (быстрее всего)
+  boost_confirm: BOOST сразу нагревает на полной мощности (днём электроэнергия дороже). Запустить?
+  power: Включён
+  eco: Eco
+  errors: Ошибки
+  antileg: Защита от легионеллы
+  antileg_on: включена ✅
+  antileg_off: "⚠️ ВЫКЛЮЧЕНА — включите её в официальном приложении Ariston"
+  max_temp: Макс. температура
+  readonly_note: Эти настройки намеренно не меняются с панели.
+
+notify:
+  mode_PROGRAM: расписание
+  mode_MANUAL: ручной
+  mode_BOOST: BOOST
+  morning_title: Водонагреватель – утро
+  morning_msg: "Вода {temp} °C, душей: {showers}. За ночь по ночному тарифу: {cheap} кВт·ч (доля за 24 ч: {share} %)."
+  ready_title: Водонагреватель – вода готова
+  ready_msg: "Нагрев завершён: {temp} °C, душей: {showers}."
+  expensive_title: Водонагреватель греет по дневному тарифу
+  expensive_msg: "Нагрев идёт с {since} (вода {temp} °C, режим: {mode})."
+  low_title: Водонагреватель – мало горячей воды
+  low_msg: "Вода {temp} °C. Включить BOOST (дневной тариф)?"
+  boost_button: BOOST
+  boost_on: BOOST включён.
+  boost_long_title: Водонагреватель – BOOST
+  boost_long_msg: BOOST включён уже 2 часа. Вернуться к расписанию с панели?
+  conn_title: Водонагреватель – связь
+  conn_lost: "Нет данных от сервера Ariston уже 30 мин ({name}). Водонагреватель продолжает работать по встроенному расписанию."
+  conn_back: Данные от сервера Ariston снова поступают.
+  manual_title: Водонагреватель – ручной нагрев завершён
+  manual_reached: "Вода нагрета до {temp} °C (цель {target} °C)."
+  manual_already: "Вода уже {temp} °C, нагрев до {target} °C не нужен."
+  manual_timeout: "Ручной нагрев длился 4 ч и был остановлен (вода {temp} °C)."
+  manual_back: Водонагреватель снова работает по расписанию.
+  antileg_title: Водонагреватель – защита от легионеллы ВЫКЛЮЧЕНА
+  antileg_msg: Защита от легионеллы только что была выключена. Если это не было намеренно, включите её в официальном приложении Ariston.
+  error_title: Водонагреватель – ОШИБКА
+  error_msg: "Водонагреватель сообщает об ошибке (количество ошибок: {count}). Проверьте дисплей водонагревателя или официальное приложение."
+  sched_title: Водонагреватель – расписание
+  sched_written: "Расписание записано и проверено. Будни: {weekdays}. Выходные: {weekend}. (резервная копия: {backup})"
+  sched_unchanged: Расписание уже такое, ничего не изменено.
+  sched_restored: "Расписание восстановлено из {file}."
+
+excel:
+  file_name: vodonagrevatel_potreblenie.xlsx
+  sheet_month: По месяцам
+  sheet_day: По дням
+  sheet_hour: По часам
+  sheet_info: Инфо
+  col_month: Месяц
+  col_date: Дата
+  col_hour: Час (начало)
+  kwh_cheap: кВт·ч ночной
+  kwh_expensive: кВт·ч дневной
+  kwh_total: кВт·ч всего
+  cur_cheap: "{cur} ночной"
+  cur_expensive: "{cur} дневной"
+  cur_total: "{cur} всего"
+  share: Доля ночного
+  total: Итого
+  item: Параметр
+  value: Значение
+  created: Создано
+  cheap_hours: Ночной тариф
+  price_cheap: "Цена ночного тарифа ({cur}/кВт·ч)"
+  price_expensive: "Цена дневного тарифа ({cur}/кВт·ч)"
+  total_since: Всего с начала измерений (кВт·ч)
+  note: Примечание
+  note_text: 'Ariston передаёт потребление с задержкой 1–3 ч; лист «{sheet}» показывает час, в который потребление было учтено (только часы с потреблением). Суточные и месячные итоги точны; тариф определяется по фактическому времени нагрева.'
+  cost: Стоимость
+  cost_text: Каждый кВт·ч оценивается по цене тарифа, действовавшей в момент учёта.

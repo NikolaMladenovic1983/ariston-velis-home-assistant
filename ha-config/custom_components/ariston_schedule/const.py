@@ -26,3 +26,14 @@ SERVICE_SET_SCHEDULE = "set_schedule"
 SERVICE_RESTORE_BACKUP = "restore_backup"
 SERVICE_REFRESH = "refresh"
 SERVICE_EXPORT_XLSX = "export_xlsx"
+
+
+def translated_error(key: str, **placeholders):
+    """HomeAssistantError shown in the user's language (translations: exceptions.<key>)."""
+    from homeassistant.exceptions import HomeAssistantError  # noqa: PLC0415
+
+    return HomeAssistantError(
+        translation_domain=DOMAIN,
+        translation_key=key,
+        translation_placeholders={k: str(v) for k, v in placeholders.items()},
+    )

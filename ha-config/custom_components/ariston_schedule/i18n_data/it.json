@@ -1,0 +1,41 @@
+{
+  "language_name": "Italiano",
+  "excel": {
+    "file_name": "scaldabagno_consumi.xlsx",
+    "sheet_month": "Per mese",
+    "sheet_day": "Per giorno",
+    "sheet_hour": "Per ora",
+    "sheet_info": "Info",
+    "col_month": "Mese",
+    "col_date": "Data",
+    "col_hour": "Ora (inizio)",
+    "kwh_cheap": "kWh fascia economica",
+    "kwh_expensive": "kWh fascia piena",
+    "kwh_total": "kWh totale",
+    "cur_cheap": "{cur} fascia economica",
+    "cur_expensive": "{cur} fascia piena",
+    "cur_total": "{cur} totale",
+    "share": "Quota fascia economica",
+    "total": "Totale",
+    "item": "Voce",
+    "value": "Valore",
+    "created": "Creato il",
+    "cheap_hours": "Fascia economica",
+    "price_cheap": "Prezzo fascia economica ({cur}/kWh)",
+    "price_expensive": "Prezzo fascia piena ({cur}/kWh)",
+    "total_since": "Totale dall'inizio delle misure (kWh)",
+    "note": "Nota",
+    "note_text": "Ariston comunica il consumo con 1–3 h di ritardo; il foglio \"{sheet}\" mostra l'ora in cui il consumo è stato conteggiato (solo le ore con consumo). I totali giornalieri e mensili sono esatti; la fascia è determinata dall'orario effettivo di riscaldamento.",
+    "cost": "Costo",
+    "cost_text": "Ogni kWh è valorizzato al prezzo della fascia in vigore nel momento in cui è stato conteggiato."
+  },
+  "days": {
+    "mon": "Lunedì",
+    "tue": "Martedì",
+    "wed": "Mercoledì",
+    "thu": "Giovedì",
+    "fri": "Venerdì",
+    "sat": "Sabato",
+    "sun": "Domenica"
+  }
+}

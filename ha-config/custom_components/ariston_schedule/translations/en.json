@@ -2,83 +2,178 @@
   "config": {
     "step": {
       "user": {
-        "title": "Ariston nalog",
-        "description": "Isti email i lozinka kao u zvaničnoj Ariston NET aplikaciji.",
+        "title": "Ariston account",
+        "description": "The same email and password as in the official Ariston NET app.",
         "data": {
           "username": "Email",
-          "password": "Lozinka"
+          "password": "Password"
         }
       },
       "device": {
-        "title": "Izbor bojlera",
+        "title": "Select the water heater",
         "data": {
-          "gateway_id": "Bojler"
+          "gateway_id": "Water heater"
         }
       }
     },
     "error": {
-      "invalid_auth": "Pogrešan email ili lozinka",
-      "cannot_connect": "Ne mogu da se povežem na Ariston server",
-      "no_devices": "Na nalogu nema Velis bojlera"
+      "invalid_auth": "Invalid email or password",
+      "cannot_connect": "Cannot connect to the Ariston server",
+      "no_devices": "There is no Velis water heater on this account"
     },
     "abort": {
-      "already_configured": "Ovaj bojler je već dodat"
+      "already_configured": "This water heater is already configured"
     }
   },
   "options": {
     "step": {
       "init": {
-        "title": "Jeftina tarifa",
-        "description": "Sati jeftine (niže) tarife struje — koristi se za senzore potrošnje.",
+        "title": "Cheap tariff",
+        "description": "Hours of the cheap (lower) electricity tariff, used for the consumption and cost sensors.",
         "data": {
-          "cheap_start_hour": "Početak (sat)",
-          "cheap_end_hour": "Kraj (sat)"
+          "cheap_start_hour": "Start (hour)",
+          "cheap_end_hour": "End (hour)"
         }
       }
     }
   },
+  "device": {
+    "boiler_schedule": {
+      "name": "Boiler schedule"
+    }
+  },
+  "entity": {
+    "sensor": {
+      "schedule": {
+        "name": "Schedule"
+      },
+      "next_slot": {
+        "name": "Next slot"
+      },
+      "energy_24h": {
+        "name": "Consumption last 24h"
+      },
+      "energy_cheap_24h": {
+        "name": "Cheap-tariff consumption 24h"
+      },
+      "cheap_share_24h": {
+        "name": "Cheap-tariff share 24h"
+      },
+      "energy_7d": {
+        "name": "Consumption last 7 days"
+      },
+      "energy_total": {
+        "name": "Total consumption"
+      },
+      "energy_cheap": {
+        "name": "Total consumption cheap tariff"
+      },
+      "energy_expensive": {
+        "name": "Total consumption expensive tariff"
+      },
+      "cost_cheap": {
+        "name": "Cost cheap tariff"
+      },
+      "cost_expensive": {
+        "name": "Cost expensive tariff"
+      },
+      "cost_total": {
+        "name": "Total cost"
+      },
+      "export_xlsx": {
+        "name": "Excel report"
+      }
+    }
+  },
+  "exceptions": {
+    "not_loaded": {
+      "message": "The Ariston schedule integration is not loaded"
+    },
+    "invalid_time": {
+      "message": "Invalid time: {value} (expected HH:MM)"
+    },
+    "invalid_day": {
+      "message": "Invalid day: {value}"
+    },
+    "no_days": {
+      "message": "No day was given"
+    },
+    "temp_and_showers": {
+      "message": "{time}: set either a temperature or a number of showers, not both"
+    },
+    "temp_range": {
+      "message": "{time}: temperature {temp} °C is outside {min}–{max} °C"
+    },
+    "showers_range": {
+      "message": "{time}: the number of showers must be 1–{max}"
+    },
+    "duplicate_time": {
+      "message": "{day}: two slots at the same time"
+    },
+    "too_many_slots": {
+      "message": "{day}: at most {max} slots per day"
+    },
+    "empty_schedule": {
+      "message": "The schedule cannot be completely empty"
+    },
+    "read_failed": {
+      "message": "Cannot read the current schedule: {error}"
+    },
+    "write_failed": {
+      "message": "Writing the schedule failed: {error} (backup: {backup})"
+    },
+    "verify_failed": {
+      "message": "Ariston accepted the write, but the schedule read back is different. Backup: {backup}"
+    },
+    "no_backups": {
+      "message": "There are no saved backups"
+    },
+    "backup_missing": {
+      "message": "Backup {name} does not exist. Available: {available}"
+    }
+  },
   "services": {
     "set_days": {
-      "name": "Postavi raspored za dane",
-      "description": "Zameni termine za izabrane dane (ostali dani ostaju isti). Pre upisa se pravi backup, posle upisa provera.",
+      "name": "Set schedule for days",
+      "description": "Replaces the slots of the selected days (other days stay the same). A backup is made before writing and the result is verified.",
       "fields": {
         "days": {
-          "name": "Dani",
-          "description": "svi, radni, vikend ili pon/uto/sre/cet/pet/sub/ned"
+          "name": "Days",
+          "description": "all, workdays, weekend, mon…sun or 0–6 (0 = Sunday)"
         },
         "slots": {
-          "name": "Termini",
-          "description": "Lista termina: [{\"time\": \"06:00\", \"temp\": 75}] ili [{\"time\": \"07:00\", \"showers\": 2}]. Vreme = kada voda treba da bude spremna."
+          "name": "Slots",
+          "description": "List of slots: [{\"time\": \"06:00\", \"temp\": 75}] or [{\"time\": \"07:00\", \"showers\": 2}]. Time = when the water should be ready."
         }
       }
     },
     "set_schedule": {
-      "name": "Postavi ceo raspored",
-      "description": "Zameni ceo nedeljni raspored. Dani koji nisu navedeni ostaju bez termina.",
+      "name": "Set the whole schedule",
+      "description": "Replaces the whole weekly schedule. Days that are not listed get no slots.",
       "fields": {
         "plans": {
-          "name": "Planovi",
-          "description": "[{\"days\": \"radni\", \"slots\": [...]}, {\"days\": \"vikend\", \"slots\": [...]}]"
+          "name": "Plans",
+          "description": "[{\"days\": \"workdays\", \"slots\": [...]}, {\"days\": \"weekend\", \"slots\": [...]}]"
         }
       }
     },
     "restore_backup": {
-      "name": "Vrati raspored iz backup-a",
-      "description": "Bez imena fajla vraća stanje pre poslednje izmene.",
+      "name": "Restore schedule from backup",
+      "description": "Without a file name it restores the schedule as it was before the last change.",
       "fields": {
         "file": {
-          "name": "Fajl",
-          "description": "Ime backup fajla iz /config/ariston_schedule_backups"
+          "name": "File",
+          "description": "Backup file name from /config/ariston_schedule_backups"
         }
       }
     },
     "refresh": {
-      "name": "Osveži",
-      "description": "Odmah pročitaj raspored i potrošnju sa Ariston servera."
+      "name": "Refresh",
+      "description": "Read the schedule and the consumption from the Ariston server now."
     },
     "export_xlsx": {
-      "name": "Napravi Excel izveštaj",
-      "description": "Pravi .xlsx sa potrošnjom (kWh) i troškom po tarifi po mesecima, danima i satima; link je u senzoru „Excel izveštaj“."
+      "name": "Create Excel report",
+      "description": "Creates an .xlsx file with consumption (kWh) and cost per tariff by month, day and hour. The link is in the \"Excel report\" sensor."
     }
   }
 }

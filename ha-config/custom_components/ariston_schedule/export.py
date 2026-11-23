@@ -7,6 +7,7 @@ inside the tailnet — the public Funnel exposes only the Google endpoints.)
 from __future__ import annotations
 
 import datetime as dt
+import json
 import logging
 import secrets
 from pathlib import Path
@@ -23,7 +24,6 @@ from . import xlsx_writer as xw
 from .const import CONF_CHEAP_END, CONF_CHEAP_START, DEFAULT_CHEAP_END, DEFAULT_CHEAP_START, DOMAIN
 
 _LOGGER = logging.getLogger(__name__)
-FILE_NAME = "bojler_potrosnja.xlsx"
 # key -> unique_id suffix of our own sensors
 SERIES = {
     "kwh_cheap": "energy_cumulative_cheap",
@@ -68,17 +68,33 @@ def _rows(table, first_cell) -> list[list[Any]]:
     return out
 
 
-def _columns(first: xw.Column, currency: str) -> list[xw.Column]:
+def _columns(first: xw.Column, T: dict[str, str], cur: str) -> list[xw.Column]:
     return [
         first,
-        xw.Column("kWh jeftina", "kwh", 13, True),
-        xw.Column("kWh skupa", "kwh", 13, True),
-        xw.Column("kWh ukupno", "kwh", 13, True),
-        xw.Column(f"{currency} jeftina", "money", 13, True),
-        xw.Column(f"{currency} skupa", "money", 13, True),
-        xw.Column(f"{currency} ukupno", "money", 13, True),
-        xw.Column("Udeo jeftine", "pct", 13),
+        xw.Column(T["kwh_cheap"], "kwh", 15, True),
+        xw.Column(T["kwh_expensive"], "kwh", 15, True),
+        xw.Column(T["kwh_total"], "kwh", 13, True),
+        xw.Column(T["cur_cheap"].format(cur=cur), "money", 15, True),
+        xw.Column(T["cur_expensive"].format(cur=cur), "money", 15, True),
+        xw.Column(T["cur_total"].format(cur=cur), "money", 13, True),
+        xw.Column(T["share"], "pct", 15),
     ]
+
+
+I18N_DIR = Path(__file__).parent / "i18n_data"
+LANGUAGE_SELECT = "input_select.bojler_jezik"
+
+
+def _load_texts(hass: HomeAssistant) -> dict[str, Any]:
+    """Excel texts in the language chosen in input_select.bojler_jezik (else the HA system language, else en)."""
+    catalogs = {f.stem: json.loads(f.read_text(encoding="utf-8")) for f in I18N_DIR.glob("*.json")}
+    st = hass.states.get(LANGUAGE_SELECT)
+    by_name = {c["language_name"]: lang for lang, c in catalogs.items()}
+    lang = by_name.get(st.state) if st else None
+    if lang is None:
+        sys_lang = hass.config.language or "en"
+        lang = sys_lang if sys_lang in catalogs else sys_lang.split("-")[0]
+    return catalogs.get(lang) or catalogs["en"]
 
 
 async def async_export(hass: HomeAssistant, coord) -> dict[str, Any]:
@@ -99,31 +115,32 @@ async def async_export(hass: HomeAssistant, coord) -> dict[str, Any]:
     by_hour = await rec.async_add_executor_job(query, hours_since, "hour")
 
     cur = hass.config.currency or "RSD"
+    texts = await hass.async_add_executor_job(_load_texts, hass)
+    T = texts["excel"]
     led = coord._ledger or {}
     prices = led.get("prices", {})
     o = coord.config_entry.options
     cs, ce = o.get(CONF_CHEAP_START, DEFAULT_CHEAP_START), o.get(CONF_CHEAP_END, DEFAULT_CHEAP_END)
 
     sheets = [
-        xw.Sheet("Po mesecima", _columns(xw.Column("Mesec", "month", 16), cur),
-                 _rows(_table(by_month, ids), lambda t: t.date()), totals_label="Ukupno"),
-        xw.Sheet("Po danima", _columns(xw.Column("Datum", "date", 13), cur),
-                 _rows(_table(by_day, ids), lambda t: t.date()), totals_label="Ukupno"),
-        xw.Sheet("Po satima", _columns(xw.Column("Sat (početak)", "datetime", 18), cur),
-                 [r for r in _rows(_table(by_hour, ids), lambda t: t) if r[3] or r[6]], totals_label="Ukupno"),
-        xw.Sheet("Info", [xw.Column("Stavka", "text", 34), xw.Column("Vrednost", "text", 60)], [
-            ["Napravljeno", now.strftime("%d.%m.%Y %H:%M")],
-            ["Jeftina tarifa", f"{cs:02d}:00–{ce:02d}:00"],
-            [f"Cena jeftina ({cur}/kWh)", prices.get("cheap", "")],
-            [f"Cena skupa ({cur}/kWh)", prices.get("expensive", "")],
-            ["Ukupno od početka merenja (kWh)", round(led.get("total", 0.0), 3)],
-            ["Napomena", "Ariston šalje potrošnju sa kašnjenjem 1–3 h; list „Po satima“ prikazuje sat kada je "
-                         "potrošnja obračunata (samo sati sa potrošnjom). Dnevni i mesečni zbirovi su tačni, "
-                         "tarifa je određena po stvarnom vremenu grejanja."],
-            ["Trošak", "Svaki kWh po ceni tarife važećoj u trenutku obračuna."],
+        xw.Sheet(T["sheet_month"], _columns(xw.Column(T["col_month"], "month", 16), T, cur),
+                 _rows(_table(by_month, ids), lambda t: t.date()), totals_label=T["total"]),
+        xw.Sheet(T["sheet_day"], _columns(xw.Column(T["col_date"], "date", 13), T, cur),
+                 _rows(_table(by_day, ids), lambda t: t.date()), totals_label=T["total"]),
+        xw.Sheet(T["sheet_hour"], _columns(xw.Column(T["col_hour"], "datetime", 18), T, cur),
+                 [r for r in _rows(_table(by_hour, ids), lambda t: t) if r[3] or r[6]], totals_label=T["total"]),
+        xw.Sheet(T["sheet_info"], [xw.Column(T["item"], "text", 36), xw.Column(T["value"], "text", 70)], [
+            [T["created"], now.strftime("%Y-%m-%d %H:%M")],
+            [T["cheap_hours"], f"{cs:02d}:00–{ce:02d}:00"],
+            [T["price_cheap"].format(cur=cur), prices.get("cheap", "")],
+            [T["price_expensive"].format(cur=cur), prices.get("expensive", "")],
+            [T["total_since"], round(led.get("total", 0.0), 3)],
+            [T["note"], T["note_text"].format(sheet=T["sheet_hour"])],
+            [T["cost"], T["cost_text"]],
         ]),
     ]
     data = xw.build_xlsx(sheets)
+    file_name = T["file_name"]
 
     store: Store[dict[str, Any]] = Store(hass, 1, f"{DOMAIN}.{coord.gw}.export")
     meta = await store.async_load() or {}
@@ -134,14 +151,17 @@ async def async_export(hass: HomeAssistant, coord) -> dict[str, Any]:
 
     def write() -> Path:
         folder.mkdir(parents=True, exist_ok=True)
-        tmp = folder / (FILE_NAME + ".tmp")
+        for old in folder.glob("*.xlsx"):  # previous language → other file name
+            if old.name != file_name:
+                old.unlink(missing_ok=True)
+        tmp = folder / (file_name + ".tmp")
         tmp.write_bytes(data)
-        tmp.replace(folder / FILE_NAME)
-        return folder / FILE_NAME
+        tmp.replace(folder / file_name)
+        return folder / file_name
 
     path = await hass.async_add_executor_job(write)
     info = {
-        "url": f"/local/bojler-{meta['token']}/{FILE_NAME}?v={int(now.timestamp())}",
+        "url": f"/local/bojler-{meta['token']}/{file_name}?v={int(now.timestamp())}",
         "generated": now.isoformat(),
         "path": str(path),
         "months": len(sheets[0].rows),

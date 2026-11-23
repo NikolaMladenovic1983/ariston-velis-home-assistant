@@ -1,0 +1,179 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Ariston-Konto",
+        "description": "Dieselbe E-Mail-Adresse und dasselbe Passwort wie in der offiziellen Ariston NET App.",
+        "data": {
+          "username": "E-Mail",
+          "password": "Passwort"
+        }
+      },
+      "device": {
+        "title": "Warmwasserspeicher auswählen",
+        "data": {
+          "gateway_id": "Warmwasserspeicher"
+        }
+      }
+    },
+    "error": {
+      "invalid_auth": "Ungültige E-Mail-Adresse oder ungültiges Passwort",
+      "cannot_connect": "Keine Verbindung zum Ariston-Server möglich",
+      "no_devices": "In diesem Konto gibt es keinen Velis-Warmwasserspeicher"
+    },
+    "abort": {
+      "already_configured": "Dieser Warmwasserspeicher ist bereits eingerichtet"
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Niedertarif",
+        "description": "Stunden des günstigen (Nieder-)Stromtarifs, verwendet für die Verbrauchs- und Kostensensoren.",
+        "data": {
+          "cheap_start_hour": "Beginn (Stunde)",
+          "cheap_end_hour": "Ende (Stunde)"
+        }
+      }
+    }
+  },
+  "device": {
+    "boiler_schedule": {
+      "name": "Boiler-Zeitplan"
+    }
+  },
+  "entity": {
+    "sensor": {
+      "schedule": {
+        "name": "Zeitplan"
+      },
+      "next_slot": {
+        "name": "Nächster Termin"
+      },
+      "energy_24h": {
+        "name": "Verbrauch letzte 24 h"
+      },
+      "energy_cheap_24h": {
+        "name": "Verbrauch im Niedertarif 24 h"
+      },
+      "cheap_share_24h": {
+        "name": "Anteil Niedertarif 24 h"
+      },
+      "energy_7d": {
+        "name": "Verbrauch letzte 7 Tage"
+      },
+      "energy_total": {
+        "name": "Gesamtverbrauch"
+      },
+      "energy_cheap": {
+        "name": "Gesamtverbrauch Niedertarif"
+      },
+      "energy_expensive": {
+        "name": "Gesamtverbrauch Hochtarif"
+      },
+      "cost_cheap": {
+        "name": "Kosten Niedertarif"
+      },
+      "cost_expensive": {
+        "name": "Kosten Hochtarif"
+      },
+      "cost_total": {
+        "name": "Gesamtkosten"
+      },
+      "export_xlsx": {
+        "name": "Excel-Bericht"
+      }
+    }
+  },
+  "exceptions": {
+    "not_loaded": {
+      "message": "Die Integration Ariston-Zeitplan ist nicht geladen"
+    },
+    "invalid_time": {
+      "message": "Ungültige Uhrzeit: {value} (erwartet HH:MM)"
+    },
+    "invalid_day": {
+      "message": "Ungültiger Tag: {value}"
+    },
+    "no_days": {
+      "message": "Es wurde kein Tag angegeben"
+    },
+    "temp_and_showers": {
+      "message": "{time}: entweder eine Temperatur oder eine Anzahl Duschen angeben, nicht beides"
+    },
+    "temp_range": {
+      "message": "{time}: Temperatur {temp} °C liegt außerhalb von {min}–{max} °C"
+    },
+    "showers_range": {
+      "message": "{time}: die Anzahl der Duschen muss 1–{max} sein"
+    },
+    "duplicate_time": {
+      "message": "{day}: zwei Termine zur selben Zeit"
+    },
+    "too_many_slots": {
+      "message": "{day}: höchstens {max} Termine pro Tag"
+    },
+    "empty_schedule": {
+      "message": "Der Zeitplan darf nicht vollständig leer sein"
+    },
+    "read_failed": {
+      "message": "Der aktuelle Zeitplan kann nicht gelesen werden: {error}"
+    },
+    "write_failed": {
+      "message": "Schreiben des Zeitplans fehlgeschlagen: {error} (Sicherung: {backup})"
+    },
+    "verify_failed": {
+      "message": "Ariston hat das Schreiben akzeptiert, aber der zurückgelesene Zeitplan weicht ab. Sicherung: {backup}"
+    },
+    "no_backups": {
+      "message": "Es gibt keine gespeicherten Sicherungen"
+    },
+    "backup_missing": {
+      "message": "Die Sicherung {name} existiert nicht. Verfügbar: {available}"
+    }
+  },
+  "services": {
+    "set_days": {
+      "name": "Zeitplan für Tage festlegen",
+      "description": "Ersetzt die Termine der ausgewählten Tage (andere Tage bleiben unverändert). Vor dem Schreiben wird eine Sicherung erstellt, danach wird das Ergebnis geprüft.",
+      "fields": {
+        "days": {
+          "name": "Tage",
+          "description": "all, workdays, weekend, mon…sun oder 0–6 (0 = Sonntag)"
+        },
+        "slots": {
+          "name": "Termine",
+          "description": "Liste der Termine: [{\"time\": \"06:00\", \"temp\": 75}] oder [{\"time\": \"07:00\", \"showers\": 2}]. Uhrzeit = wann das Wasser bereit sein soll."
+        }
+      }
+    },
+    "set_schedule": {
+      "name": "Gesamten Zeitplan festlegen",
+      "description": "Ersetzt den gesamten Wochenzeitplan. Nicht aufgeführte Tage erhalten keine Termine.",
+      "fields": {
+        "plans": {
+          "name": "Pläne",
+          "description": "[{\"days\": \"workdays\", \"slots\": [...]}, {\"days\": \"weekend\", \"slots\": [...]}]"
+        }
+      }
+    },
+    "restore_backup": {
+      "name": "Zeitplan aus Sicherung wiederherstellen",
+      "description": "Ohne Dateinamen wird der Zeitplan vor der letzten Änderung wiederhergestellt.",
+      "fields": {
+        "file": {
+          "name": "Datei",
+          "description": "Name der Sicherungsdatei aus /config/ariston_schedule_backups"
+        }
+      }
+    },
+    "refresh": {
+      "name": "Aktualisieren",
+      "description": "Zeitplan und Verbrauch jetzt vom Ariston-Server lesen."
+    },
+    "export_xlsx": {
+      "name": "Excel-Bericht erstellen",
+      "description": "Erstellt eine .xlsx-Datei mit Verbrauch (kWh) und Kosten pro Tarif nach Monat, Tag und Stunde. Der Link steht im Sensor „Excel-Bericht“."
+    }
+  }
+}

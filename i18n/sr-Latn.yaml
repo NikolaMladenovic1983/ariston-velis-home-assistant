@@ -1,0 +1,251 @@
+# Srpski (latinica). Ćirilica (sr) se generiše automatski iz ovog fajla (tools/i18n_build.py).
+language_name: Srpski
+
+integration:
+  config:
+    step:
+      user:
+        title: Ariston nalog
+        description: Isti email i lozinka kao u zvaničnoj Ariston NET aplikaciji.
+        data:
+          username: Email
+          password: Lozinka
+      device:
+        title: Izbor bojlera
+        data:
+          gateway_id: Bojler
+    error:
+      invalid_auth: Pogrešan email ili lozinka
+      cannot_connect: Ne mogu da se povežem na Ariston server
+      no_devices: Na nalogu nema Velis bojlera
+    abort:
+      already_configured: Ovaj bojler je već dodat
+  options:
+    step:
+      init:
+        title: Jeftina tarifa
+        description: Sati jeftine (niže) tarife struje, koriste se za senzore potrošnje i troška.
+        data:
+          cheap_start_hour: Početak (sat)
+          cheap_end_hour: Kraj (sat)
+  device:
+    boiler_schedule:
+      name: Bojler raspored
+  entity:
+    sensor:
+      schedule: {name: Raspored}
+      next_slot: {name: Sledeći termin}
+      energy_24h: {name: Potrošnja poslednja 24h}
+      energy_cheap_24h: {name: Potrošnja u jeftinoj tarifi 24h}
+      cheap_share_24h: {name: Udeo jeftine tarife 24h}
+      energy_7d: {name: Potrošnja 7 dana}
+      energy_total: {name: Ukupna potrošnja}
+      energy_cheap: {name: Ukupna potrošnja jeftina tarifa}
+      energy_expensive: {name: Ukupna potrošnja skupa tarifa}
+      cost_cheap: {name: Trošak jeftina tarifa}
+      cost_expensive: {name: Trošak skupa tarifa}
+      cost_total: {name: Trošak ukupno}
+      export_xlsx: {name: Excel izveštaj}
+  exceptions:
+    not_loaded: {message: Integracija Ariston raspored nije učitana}
+    invalid_time: {message: "Neispravno vreme: {value} (očekivano HH:MM)"}
+    invalid_day: {message: "Neispravan dan: {value}"}
+    no_days: {message: Nije zadat nijedan dan}
+    temp_and_showers: {message: "{time}: zadaj ili temperaturu ili broj tuševa, ne oba"}
+    temp_range: {message: "{time}: temperatura {temp} °C je van opsega {min}–{max} °C"}
+    showers_range: {message: "{time}: broj tuševa mora biti 1–{max}"}
+    duplicate_time: {message: "{day}: dva termina u isto vreme"}
+    too_many_slots: {message: "{day}: najviše {max} termina dnevno"}
+    empty_schedule: {message: Raspored ne može biti potpuno prazan}
+    read_failed: {message: "Ne mogu da pročitam trenutni raspored: {error}"}
+    write_failed: {message: "Upis rasporeda nije uspeo: {error} (rezervna kopija: {backup})"}
+    verify_failed: {message: "Ariston je prihvatio upis, ali se pročitani raspored razlikuje. Rezervna kopija: {backup}"}
+    no_backups: {message: Nema sačuvanih rezervnih kopija}
+    backup_missing: {message: "Rezervna kopija {name} ne postoji. Dostupne: {available}"}
+  services:
+    set_days:
+      name: Postavi raspored za dane
+      description: Zamenjuje termine za izabrane dane (ostali dani ostaju isti). Pre upisa se pravi rezervna kopija, a posle upisa se proverava rezultat.
+      fields:
+        days:
+          name: Dani
+          description: "svi, radni, vikend, pon…ned ili 0–6 (0 = nedelja)"
+        slots:
+          name: Termini
+          description: 'Lista termina: [{"time": "06:00", "temp": 75}] ili [{"time": "07:00", "showers": 2}]. Vreme = kada voda treba da bude spremna.'
+    set_schedule:
+      name: Postavi ceo raspored
+      description: Zamenjuje ceo nedeljni raspored. Dani koji nisu navedeni ostaju bez termina.
+      fields:
+        plans:
+          name: Planovi
+          description: '[{"days": "radni", "slots": [...]}, {"days": "vikend", "slots": [...]}]'
+    restore_backup:
+      name: Vrati raspored iz rezervne kopije
+      description: Bez imena fajla vraća raspored kakav je bio pre poslednje izmene.
+      fields:
+        file:
+          name: Fajl
+          description: Ime fajla rezervne kopije iz /config/ariston_schedule_backups
+    refresh:
+      name: Osveži
+      description: Odmah pročitaj raspored i potrošnju sa Ariston servera.
+    export_xlsx:
+      name: Napravi Excel izveštaj
+      description: Pravi .xlsx fajl sa potrošnjom (kWh) i troškom po tarifi po mesecima, danima i satima. Link je u senzoru „Excel izveštaj“.
+
+days: {mon: Ponedeljak, tue: Utorak, wed: Sreda, thu: Četvrtak, fri: Petak, sat: Subota, sun: Nedelja}
+
+dashboard:
+  title: Bojler
+  tab_home: Bojler
+  tab_usage: Potrošnja
+  tab_schedule: Raspored
+  tab_settings: Podešavanja
+  badge_heating: Greje
+  badge_mode: Režim
+  badge_next: Sledeći termin
+  mode_PROGRAM: Raspored
+  mode_MANUAL: Ručno
+  mode_BOOST: Boost
+  h_water: Topla voda
+  gauge_name: Temperatura vode
+  showers: Tuševi
+  target: Cilj
+  time_to_heat: Do zagrevanja
+  h_manual: Ručno grejanje
+  manual_switch: Grej odmah (van rasporeda)
+  manual_confirm: "Uključeno: greje odmah do izabrane temperature (danju je struja skuplja), pa se sam vraća na raspored. Isključeno: odmah nazad na raspored."
+  manual_confirm_short: Uključiti ili isključiti ručno grejanje?
+  heat_to: Grej do
+  h_cost: Trošak
+  cheap_24h: Jeftina 24h
+  today: Danas
+  this_month: Ovaj mesec
+  h_usage: Potrošnja i trošak
+  table_title: kWh i trošak po tarifi
+  usage_graph: Potrošnja po tarifi
+  excel_link: Preuzmi Excel (.xlsx)
+  excel_desc: "Po mesecima, danima i satima · kWh i trošak po tarifi · ažurirano {time}"
+  excel_pending: Excel izveštaj se pravi…
+  refresh: Osveži
+  h_monthly: Po mesecima
+  cost_by_month: "Trošak po mesecima ({cur})"
+  kwh_by_month: Potrošnja po mesecima (kWh)
+  cheap: Jeftina tarifa
+  expensive: Skupa tarifa
+  h_habits: Navike grejanja
+  cheap_share: Udeo jeftine tarife (24h)
+  temp_48h: Temperatura vode (48 h)
+  water: Voda
+  heating: Greje
+  lag_note: Ariston šalje potrošnju sa zakašnjenjem od 1–3 h, pa se po satu pojavljuje kasnije nego što je bojler grejao. Dnevni i mesečni zbirovi su tačni; tarifa se određuje po stvarnom vremenu grejanja.
+  h_schedule: Raspored u bojleru
+  every_day: Svaki dan
+  weekdays: Radni dani
+  weekend: Vikend
+  schedule_note: Vreme = kada voda treba da bude spremna; bojler sam kreće ranije.
+  cheap_tariff: Jeftina tarifa
+  last_change: Poslednja izmena
+  next_slot: Sledeći termin
+  h_edit: Izmena
+  form_diff: Formular se razlikuje od rasporeda u bojleru
+  form_diff_confirm: Učitati raspored iz bojlera u formular? Izmene u formularu se odbacuju.
+  form_diff_note: „Primeni“ bi upisao vrednosti iz formulara. Ako to nije namera, dodirni upozorenje ili „Učitaj trenutni“.
+  weekdays_title: Radni dani (pon–pet)
+  weekend_title: Vikend (sub–ned)
+  slot1: Termin 1
+  temp1: Temperatura 1
+  second_slot: Drugi termin
+  slot2: Termin 2
+  temp2: Temperatura 2
+  load_current: Učitaj trenutni
+  apply: Primeni
+  apply_confirm: Upisati raspored iz formulara u bojler? Pre upisa se pravi rezervna kopija.
+  undo: Vrati prethodni
+  undo_confirm: Vratiti raspored kakav je bio pre poslednje izmene?
+  h_prices: Cene struje
+  price_cheap: "Jeftina tarifa ({cur}/kWh)"
+  price_expensive: "Skupa tarifa ({cur}/kWh)"
+  price_note: Nova cena važi za potrošnju obračunatu od trenutka izmene; ranije obračunati iznosi se ne menjaju.
+  notify_language: Jezik obaveštenja i Excel izveštaja
+  totals_title: Ukupno od početka merenja
+  total_kwh: Potrošnja
+  total_cheap: "– jeftina tarifa"
+  total_expensive: "– skupa tarifa"
+  total_cost: Trošak
+  h_advanced: Napredno
+  mode: Režim
+  back_to_schedule: Vrati na raspored
+  boost: BOOST (najbrže)
+  boost_confirm: BOOST greje punom snagom odmah (danju je struja skuplja). Pokrenuti?
+  power: Uključen
+  eco: Eco
+  errors: Greške
+  antileg: Antilegionela
+  antileg_on: uključena ✅
+  antileg_off: "⚠️ ISKLJUČENA — uključi je u zvaničnoj Ariston aplikaciji"
+  max_temp: Maks. temperatura
+  readonly_note: Ova podešavanja se namerno ne menjaju sa dashboard-a.
+
+notify:
+  mode_PROGRAM: raspored
+  mode_MANUAL: ručno
+  mode_BOOST: BOOST
+  morning_title: Bojler – jutro
+  morning_msg: "Voda {temp} °C, {showers} tuš(a). Noćas u jeftinoj tarifi: {cheap} kWh (udeo 24h: {share} %)."
+  ready_title: Bojler – voda spremna
+  ready_msg: "Grejanje završeno: {temp} °C, {showers} tuš(a)."
+  expensive_title: Bojler greje u skupoj tarifi
+  expensive_msg: "Grejanje traje od {since} (voda {temp} °C, režim: {mode})."
+  low_title: Bojler – malo tople vode
+  low_msg: "Voda je {temp} °C. Uključiti BOOST (skuplja tarifa)?"
+  boost_button: BOOST
+  boost_on: BOOST uključen.
+  boost_long_title: Bojler – BOOST
+  boost_long_msg: BOOST je uključen već 2 sata. Vratiti na raspored iz dashboard-a?
+  conn_title: Bojler – veza
+  conn_lost: "Nema podataka sa Ariston servera već 30 min ({name}). Bojler i dalje radi po ugrađenom rasporedu."
+  conn_back: Podaci sa Ariston servera ponovo stižu.
+  manual_title: Bojler – ručno grejanje završeno
+  manual_reached: "Voda zagrejana na {temp} °C (zadato {target} °C)."
+  manual_already: "Voda je već {temp} °C, pa grejanje do {target} °C nije potrebno."
+  manual_timeout: "Ručno grejanje je trajalo 4 h i prekinuto je (voda {temp} °C)."
+  manual_back: Bojler je vraćen na raspored.
+  antileg_title: Bojler – antilegionela ISKLJUČENA
+  antileg_msg: Zaštita od legionele je upravo isključena. Ako to nije bilo namerno, uključi je u zvaničnoj Ariston aplikaciji.
+  error_title: Bojler – GREŠKA
+  error_msg: "Bojler prijavljuje grešku (broj grešaka: {count}). Proveri displej bojlera ili zvaničnu aplikaciju."
+  sched_title: Bojler – raspored
+  sched_written: "Raspored upisan i proveren. Radni dani: {weekdays}. Vikend: {weekend}. (rezervna kopija: {backup})"
+  sched_unchanged: Raspored je već takav, ništa nije menjano.
+  sched_restored: "Vraćen raspored iz {file}."
+
+excel:
+  file_name: bojler_potrosnja.xlsx
+  sheet_month: Po mesecima
+  sheet_day: Po danima
+  sheet_hour: Po satima
+  sheet_info: Info
+  col_month: Mesec
+  col_date: Datum
+  col_hour: Sat (početak)
+  kwh_cheap: kWh jeftina
+  kwh_expensive: kWh skupa
+  kwh_total: kWh ukupno
+  cur_cheap: "{cur} jeftina"
+  cur_expensive: "{cur} skupa"
+  cur_total: "{cur} ukupno"
+  share: Udeo jeftine
+  total: Ukupno
+  item: Stavka
+  value: Vrednost
+  created: Napravljeno
+  cheap_hours: Jeftina tarifa
+  price_cheap: "Cena jeftina ({cur}/kWh)"
+  price_expensive: "Cena skupa ({cur}/kWh)"
+  total_since: Ukupno od početka merenja (kWh)
+  note: Napomena
+  note_text: 'Ariston šalje potrošnju sa zakašnjenjem od 1–3 h; list „{sheet}“ prikazuje sat u kom je potrošnja obračunata (samo sati sa potrošnjom). Dnevni i mesečni zbirovi su tačni; tarifa se određuje po stvarnom vremenu grejanja.'
+  cost: Trošak
+  cost_text: Svaki kWh po ceni tarife koja je važila u trenutku obračuna.

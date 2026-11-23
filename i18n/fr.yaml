@@ -1,0 +1,250 @@
+language_name: Français
+
+integration:
+  config:
+    step:
+      user:
+        title: Compte Ariston
+        description: La même adresse e-mail et le même mot de passe que dans l'application officielle Ariston NET.
+        data:
+          username: E-mail
+          password: Mot de passe
+      device:
+        title: Choisir le chauffe-eau
+        data:
+          gateway_id: Chauffe-eau
+    error:
+      invalid_auth: E-mail ou mot de passe incorrect
+      cannot_connect: Impossible de se connecter au serveur Ariston
+      no_devices: Aucun chauffe-eau Velis sur ce compte
+    abort:
+      already_configured: Ce chauffe-eau est déjà configuré
+  options:
+    step:
+      init:
+        title: Heures creuses
+        description: Heures du tarif d'électricité réduit (heures creuses), utilisées pour les capteurs de consommation et de coût.
+        data:
+          cheap_start_hour: Début (heure)
+          cheap_end_hour: Fin (heure)
+  device:
+    boiler_schedule:
+      name: Programme du chauffe-eau
+  entity:
+    sensor:
+      schedule: {name: Programme}
+      next_slot: {name: Prochain créneau}
+      energy_24h: {name: Consommation dernières 24 h}
+      energy_cheap_24h: {name: Consommation en heures creuses 24 h}
+      cheap_share_24h: {name: Part des heures creuses 24 h}
+      energy_7d: {name: Consommation 7 derniers jours}
+      energy_total: {name: Consommation totale}
+      energy_cheap: {name: Consommation totale heures creuses}
+      energy_expensive: {name: Consommation totale heures pleines}
+      cost_cheap: {name: Coût heures creuses}
+      cost_expensive: {name: Coût heures pleines}
+      cost_total: {name: Coût total}
+      export_xlsx: {name: Rapport Excel}
+  exceptions:
+    not_loaded: {message: L'intégration Programme Ariston n'est pas chargée}
+    invalid_time: {message: "Heure invalide : {value} (format attendu HH:MM)"}
+    invalid_day: {message: "Jour invalide : {value}"}
+    no_days: {message: Aucun jour n'a été indiqué}
+    temp_and_showers: {message: "{time} : indiquez soit une température, soit un nombre de douches, pas les deux"}
+    temp_range: {message: "{time} : la température {temp} °C est hors de la plage {min}–{max} °C"}
+    showers_range: {message: "{time} : le nombre de douches doit être compris entre 1 et {max}"}
+    duplicate_time: {message: "{day} : deux créneaux à la même heure"}
+    too_many_slots: {message: "{day} : au maximum {max} créneaux par jour"}
+    empty_schedule: {message: Le programme ne peut pas être entièrement vide}
+    read_failed: {message: "Impossible de lire le programme actuel : {error}"}
+    write_failed: {message: "L'écriture du programme a échoué : {error} (sauvegarde : {backup})"}
+    verify_failed: {message: "Ariston a accepté l'écriture, mais le programme relu est différent. Sauvegarde : {backup}"}
+    no_backups: {message: Aucune sauvegarde enregistrée}
+    backup_missing: {message: "La sauvegarde {name} n'existe pas. Disponibles : {available}"}
+  services:
+    set_days:
+      name: Définir le programme de certains jours
+      description: Remplace les créneaux des jours choisis (les autres jours ne changent pas). Une sauvegarde est faite avant l'écriture et le résultat est vérifié.
+      fields:
+        days:
+          name: Jours
+          description: "all, workdays, weekend, mon…sun ou 0–6 (0 = dimanche)"
+        slots:
+          name: Créneaux
+          description: 'Liste des créneaux : [{"time": "06:00", "temp": 75}] ou [{"time": "07:00", "showers": 2}]. Heure = moment où l''eau doit être prête.'
+    set_schedule:
+      name: Définir tout le programme
+      description: Remplace tout le programme hebdomadaire. Les jours non indiqués n'ont aucun créneau.
+      fields:
+        plans:
+          name: Plans
+          description: '[{"days": "workdays", "slots": [...]}, {"days": "weekend", "slots": [...]}]'
+    restore_backup:
+      name: Restaurer le programme depuis une sauvegarde
+      description: Sans nom de fichier, restaure le programme tel qu'il était avant la dernière modification.
+      fields:
+        file:
+          name: Fichier
+          description: Nom du fichier de sauvegarde dans /config/ariston_schedule_backups
+    refresh:
+      name: Actualiser
+      description: Lire maintenant le programme et la consommation depuis le serveur Ariston.
+    export_xlsx:
+      name: Créer le rapport Excel
+      description: Crée un fichier .xlsx avec la consommation (kWh) et le coût par tarif, par mois, jour et heure. Le lien se trouve dans le capteur « Rapport Excel ».
+
+days: {mon: Lundi, tue: Mardi, wed: Mercredi, thu: Jeudi, fri: Vendredi, sat: Samedi, sun: Dimanche}
+
+dashboard:
+  title: Chauffe-eau
+  tab_home: Chauffe-eau
+  tab_usage: Consommation
+  tab_schedule: Programme
+  tab_settings: Réglages
+  badge_heating: Chauffe
+  badge_mode: Mode
+  badge_next: Prochain créneau
+  mode_PROGRAM: Programme
+  mode_MANUAL: Manuel
+  mode_BOOST: Boost
+  h_water: Eau chaude
+  gauge_name: Température de l'eau
+  showers: Douches
+  target: Consigne
+  time_to_heat: Avant chauffe complète
+  h_manual: Chauffe manuelle
+  manual_switch: Chauffer maintenant (hors programme)
+  manual_confirm: "Marche : chauffe immédiatement jusqu'à la température choisie (l'électricité est plus chère en journée), puis revient seul au programme. Arrêt : retour immédiat au programme."
+  manual_confirm_short: Activer ou désactiver la chauffe manuelle ?
+  heat_to: Chauffer jusqu'à
+  h_cost: Coût
+  cheap_24h: Heures creuses 24 h
+  today: Aujourd'hui
+  this_month: Ce mois-ci
+  h_usage: Consommation et coût
+  table_title: kWh et coût par tarif
+  usage_graph: Consommation par tarif
+  excel_link: Télécharger Excel (.xlsx)
+  excel_desc: "Par mois, jour et heure · kWh et coût par tarif · mis à jour {time}"
+  excel_pending: Le rapport Excel est en préparation…
+  refresh: Actualiser
+  h_monthly: Par mois
+  cost_by_month: "Coût par mois ({cur})"
+  kwh_by_month: Consommation par mois (kWh)
+  cheap: Heures creuses
+  expensive: Heures pleines
+  h_habits: Habitudes de chauffe
+  cheap_share: Part des heures creuses (24 h)
+  temp_48h: Température de l'eau (48 h)
+  water: Eau
+  heating: Chauffe
+  lag_note: Ariston transmet la consommation avec 1 à 3 h de retard ; par heure, elle apparaît donc plus tard que la chauffe réelle. Les totaux journaliers et mensuels sont exacts ; le tarif est déterminé selon l'heure réelle de chauffe.
+  h_schedule: Programme du chauffe-eau
+  every_day: Tous les jours
+  weekdays: Jours ouvrés
+  weekend: Week-end
+  schedule_note: Heure = moment où l'eau doit être prête ; le chauffe-eau commence à chauffer plus tôt de lui-même.
+  cheap_tariff: Heures creuses
+  last_change: Dernière modification
+  next_slot: Prochain créneau
+  h_edit: Modifier
+  form_diff: Le formulaire diffère du programme du chauffe-eau
+  form_diff_confirm: Charger le programme du chauffe-eau dans le formulaire ? Les modifications du formulaire seront perdues.
+  form_diff_note: « Appliquer » écrirait les valeurs du formulaire. Si ce n'est pas voulu, touchez l'avertissement ou « Charger l'actuel ».
+  weekdays_title: Jours ouvrés (lun–ven)
+  weekend_title: Week-end (sam–dim)
+  slot1: Créneau 1
+  temp1: Température 1
+  second_slot: Second créneau
+  slot2: Créneau 2
+  temp2: Température 2
+  load_current: Charger l'actuel
+  apply: Appliquer
+  apply_confirm: Écrire le programme du formulaire dans le chauffe-eau ? Une sauvegarde est faite avant l'écriture.
+  undo: Restaurer le précédent
+  undo_confirm: Restaurer le programme tel qu'il était avant la dernière modification ?
+  h_prices: Prix de l'électricité
+  price_cheap: "Heures creuses ({cur}/kWh)"
+  price_expensive: "Heures pleines ({cur}/kWh)"
+  price_note: Un nouveau prix s'applique à la consommation comptée à partir de la modification ; les montants déjà comptés ne changent pas.
+  notify_language: Langue des notifications et du rapport Excel
+  totals_title: Total depuis le début des mesures
+  total_kwh: Consommation
+  total_cheap: "– heures creuses"
+  total_expensive: "– heures pleines"
+  total_cost: Coût
+  h_advanced: Avancé
+  mode: Mode
+  back_to_schedule: Revenir au programme
+  boost: BOOST (le plus rapide)
+  boost_confirm: BOOST chauffe immédiatement à pleine puissance (l'électricité est plus chère en journée). Lancer ?
+  power: Allumé
+  eco: Eco
+  errors: Erreurs
+  antileg: Anti-légionelle
+  antileg_on: activée ✅
+  antileg_off: "⚠️ DÉSACTIVÉE — l'activer dans l'application officielle Ariston"
+  max_temp: Température max.
+  readonly_note: Ces réglages ne sont volontairement pas modifiables depuis le tableau de bord.
+
+notify:
+  mode_PROGRAM: programme
+  mode_MANUAL: manuel
+  mode_BOOST: BOOST
+  morning_title: Chauffe-eau – matin
+  morning_msg: "Eau à {temp} °C, {showers} douche(s). Consommé cette nuit en heures creuses : {cheap} kWh (part sur 24 h : {share} %)."
+  ready_title: Chauffe-eau – eau prête
+  ready_msg: "Chauffe terminée : {temp} °C, {showers} douche(s)."
+  expensive_title: Le chauffe-eau chauffe en heures pleines
+  expensive_msg: "Chauffe depuis {since} (eau à {temp} °C, mode : {mode})."
+  low_title: Chauffe-eau – peu d'eau chaude
+  low_msg: "L'eau est à {temp} °C. Activer le BOOST (heures pleines) ?"
+  boost_button: BOOST
+  boost_on: Le BOOST est activé.
+  boost_long_title: Chauffe-eau – BOOST
+  boost_long_msg: Le BOOST est activé depuis 2 heures. Revenir au programme depuis le tableau de bord ?
+  conn_title: Chauffe-eau – connexion
+  conn_lost: "Aucune donnée du serveur Ariston depuis 30 min ({name}). Le chauffe-eau continue selon son programme intégré."
+  conn_back: Les données du serveur Ariston arrivent de nouveau.
+  manual_title: Chauffe-eau – chauffe manuelle terminée
+  manual_reached: "Eau chauffée à {temp} °C (consigne {target} °C)."
+  manual_already: "L'eau est déjà à {temp} °C, chauffer jusqu'à {target} °C n'est pas nécessaire."
+  manual_timeout: "La chauffe manuelle a duré 4 h et a été arrêtée (eau à {temp} °C)."
+  manual_back: Le chauffe-eau est revenu au programme.
+  antileg_title: Chauffe-eau – anti-légionelle DÉSACTIVÉE
+  antileg_msg: La protection anti-légionelle vient d'être désactivée. Si ce n'était pas voulu, réactivez-la dans l'application officielle Ariston.
+  error_title: Chauffe-eau – ERREUR
+  error_msg: "Le chauffe-eau signale une erreur (nombre d'erreurs : {count}). Vérifiez l'écran du chauffe-eau ou l'application officielle."
+  sched_title: Chauffe-eau – programme
+  sched_written: "Programme écrit et vérifié. Jours ouvrés : {weekdays}. Week-end : {weekend}. (sauvegarde : {backup})"
+  sched_unchanged: Le programme est déjà ainsi, rien n'a été modifié.
+  sched_restored: "Programme restauré depuis {file}."
+
+excel:
+  file_name: chauffe-eau_consommation.xlsx
+  sheet_month: Par mois
+  sheet_day: Par jour
+  sheet_hour: Par heure
+  sheet_info: Infos
+  col_month: Mois
+  col_date: Date
+  col_hour: Heure (début)
+  kwh_cheap: kWh heures creuses
+  kwh_expensive: kWh heures pleines
+  kwh_total: kWh total
+  cur_cheap: "{cur} heures creuses"
+  cur_expensive: "{cur} heures pleines"
+  cur_total: "{cur} total"
+  share: Part heures creuses
+  total: Total
+  item: Élément
+  value: Valeur
+  created: Créé le
+  cheap_hours: Heures creuses
+  price_cheap: "Prix heures creuses ({cur}/kWh)"
+  price_expensive: "Prix heures pleines ({cur}/kWh)"
+  total_since: Total depuis le début des mesures (kWh)
+  note: Remarque
+  note_text: 'Ariston transmet la consommation avec 1 à 3 h de retard ; la feuille « {sheet} » indique l''heure à laquelle la consommation a été comptée (uniquement les heures avec consommation). Les totaux journaliers et mensuels sont exacts ; le tarif est déterminé selon l''heure réelle de chauffe.'
+  cost: Coût
+  cost_text: Chaque kWh est valorisé au prix du tarif en vigueur au moment où il a été compté.

@@ -1,0 +1,179 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Cuenta de Ariston",
+        "description": "El mismo correo electrónico y la misma contraseña que en la aplicación oficial Ariston NET.",
+        "data": {
+          "username": "Correo electrónico",
+          "password": "Contraseña"
+        }
+      },
+      "device": {
+        "title": "Seleccionar el termo",
+        "data": {
+          "gateway_id": "Termo"
+        }
+      }
+    },
+    "error": {
+      "invalid_auth": "Correo electrónico o contraseña incorrectos",
+      "cannot_connect": "No se puede conectar con el servidor de Ariston",
+      "no_devices": "No hay ningún termo Velis en esta cuenta"
+    },
+    "abort": {
+      "already_configured": "Este termo ya está configurado"
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Tarifa valle",
+        "description": "Horas de la tarifa eléctrica barata (valle), usadas para los sensores de consumo y de coste.",
+        "data": {
+          "cheap_start_hour": "Inicio (hora)",
+          "cheap_end_hour": "Fin (hora)"
+        }
+      }
+    }
+  },
+  "device": {
+    "boiler_schedule": {
+      "name": "Programa del termo"
+    }
+  },
+  "entity": {
+    "sensor": {
+      "schedule": {
+        "name": "Programa"
+      },
+      "next_slot": {
+        "name": "Próxima franja"
+      },
+      "energy_24h": {
+        "name": "Consumo últimas 24 h"
+      },
+      "energy_cheap_24h": {
+        "name": "Consumo en tarifa valle 24 h"
+      },
+      "cheap_share_24h": {
+        "name": "Proporción tarifa valle 24 h"
+      },
+      "energy_7d": {
+        "name": "Consumo últimos 7 días"
+      },
+      "energy_total": {
+        "name": "Consumo total"
+      },
+      "energy_cheap": {
+        "name": "Consumo total tarifa valle"
+      },
+      "energy_expensive": {
+        "name": "Consumo total tarifa punta"
+      },
+      "cost_cheap": {
+        "name": "Coste tarifa valle"
+      },
+      "cost_expensive": {
+        "name": "Coste tarifa punta"
+      },
+      "cost_total": {
+        "name": "Coste total"
+      },
+      "export_xlsx": {
+        "name": "Informe Excel"
+      }
+    }
+  },
+  "exceptions": {
+    "not_loaded": {
+      "message": "La integración Programa de Ariston no está cargada"
+    },
+    "invalid_time": {
+      "message": "Hora no válida: {value} (se esperaba HH:MM)"
+    },
+    "invalid_day": {
+      "message": "Día no válido: {value}"
+    },
+    "no_days": {
+      "message": "No se ha indicado ningún día"
+    },
+    "temp_and_showers": {
+      "message": "{time}: indica una temperatura o un número de duchas, no ambos"
+    },
+    "temp_range": {
+      "message": "{time}: la temperatura {temp} °C está fuera del rango {min}–{max} °C"
+    },
+    "showers_range": {
+      "message": "{time}: el número de duchas debe ser 1–{max}"
+    },
+    "duplicate_time": {
+      "message": "{day}: dos franjas a la misma hora"
+    },
+    "too_many_slots": {
+      "message": "{day}: como máximo {max} franjas por día"
+    },
+    "empty_schedule": {
+      "message": "El programa no puede estar completamente vacío"
+    },
+    "read_failed": {
+      "message": "No se puede leer el programa actual: {error}"
+    },
+    "write_failed": {
+      "message": "No se pudo escribir el programa: {error} (copia de seguridad: {backup})"
+    },
+    "verify_failed": {
+      "message": "Ariston aceptó la escritura, pero el programa leído de nuevo es distinto. Copia de seguridad: {backup}"
+    },
+    "no_backups": {
+      "message": "No hay copias de seguridad guardadas"
+    },
+    "backup_missing": {
+      "message": "La copia de seguridad {name} no existe. Disponibles: {available}"
+    }
+  },
+  "services": {
+    "set_days": {
+      "name": "Definir el programa de algunos días",
+      "description": "Sustituye las franjas de los días elegidos (los demás días no cambian). Antes de escribir se hace una copia de seguridad y después se comprueba el resultado.",
+      "fields": {
+        "days": {
+          "name": "Días",
+          "description": "all, workdays, weekend, mon…sun o 0–6 (0 = domingo)"
+        },
+        "slots": {
+          "name": "Franjas",
+          "description": "Lista de franjas: [{\"time\": \"06:00\", \"temp\": 75}] o [{\"time\": \"07:00\", \"showers\": 2}]. Hora = cuándo debe estar lista el agua."
+        }
+      }
+    },
+    "set_schedule": {
+      "name": "Definir todo el programa",
+      "description": "Sustituye todo el programa semanal. Los días no indicados quedan sin franjas.",
+      "fields": {
+        "plans": {
+          "name": "Planes",
+          "description": "[{\"days\": \"workdays\", \"slots\": [...]}, {\"days\": \"weekend\", \"slots\": [...]}]"
+        }
+      }
+    },
+    "restore_backup": {
+      "name": "Restaurar el programa desde una copia de seguridad",
+      "description": "Sin nombre de archivo restaura el programa tal como estaba antes del último cambio.",
+      "fields": {
+        "file": {
+          "name": "Archivo",
+          "description": "Nombre del archivo de copia de seguridad en /config/ariston_schedule_backups"
+        }
+      }
+    },
+    "refresh": {
+      "name": "Actualizar",
+      "description": "Leer ahora el programa y el consumo desde el servidor de Ariston."
+    },
+    "export_xlsx": {
+      "name": "Crear informe Excel",
+      "description": "Crea un archivo .xlsx con el consumo (kWh) y el coste por tarifa, por mes, día y hora. El enlace está en el sensor «Informe Excel»."
+    }
+  }
+}

@@ -1,12 +1,13 @@
-# Boiler notifications (texts are Serbian). Target phone: the notify action in secrets.yaml
-# (bojler_notify: notify.mobile_app_<your_phone>), see secrets.yaml.example.
+# Boiler notifications. Texts come from custom_templates/bojler_i18n.jinja (generated from i18n/*.yaml)
+# in the language chosen in input_select.bojler_jezik (dashboard → Settings).
+# Target phone: the notify action in secrets.yaml (bojler_notify: notify.mobile_app_<your_phone>).
 # clickAction: tapping a notification opens the Bojler dashboard.
 # No automation ever touches anti-legionella or the maximum temperature.
 
 automation:
   - id: bojler_jutarnji_izvestaj
-    alias: Bojler – jutarnji izveštaj (noćno grejanje)
-    description: U 08:00 javi temperaturu vode i koliko je potrošeno u jeftinoj tarifi.
+    alias: Bojler – morning report (night heating)
+    description: At 08:00 report the water temperature and how much was used in the cheap tariff.
     mode: single
     triggers:
       - trigger: time
@@ -14,12 +15,13 @@ automation:
     actions:
       - action: !secret bojler_notify
         data:
-          title: "Bojler – jutro"
+          title: "{% from 'bojler_i18n.jinja' import t %}{{ t('morning_title') }}"
           message: >
-            Voda {{ states('sensor.bojler_temperatura_vode') }} °C,
-            {{ states('sensor.bojler_dostupni_tusevi') }} tuš(a).
-            Noćas u jeftinoj tarifi: {{ states('sensor.bojler_raspored_potrosnja_u_jeftinoj_tarifi_24h') | float(0) | round(2) }} kWh
-            (udeo 24h: {{ states('sensor.bojler_raspored_udeo_jeftine_tarife_24h') }} %).
+            {% from 'bojler_i18n.jinja' import t %}{{ t('morning_msg', {
+              'temp': states('sensor.bojler_temperatura_vode'),
+              'showers': states('sensor.bojler_dostupni_tusevi'),
+              'cheap': states('sensor.bojler_raspored_potrosnja_u_jeftinoj_tarifi_24h') | float(0) | round(2),
+              'share': states('sensor.bojler_raspored_udeo_jeftine_tarife_24h')}) }}
           data:
             tag: bojler_jutro
             group: bojler
@@ -27,8 +29,8 @@ automation:
             clickAction: /bojler-dash/bojler
 
   - id: bojler_voda_spremna
-    alias: Bojler – voda spremna (dnevno grejanje završeno)
-    description: Posle grejanja tokom dana (07–23h) javi da je voda spremna.
+    alias: Bojler – water ready (daytime heating finished)
+    description: After heating during the day (07–23h) report that the water is ready.
     mode: single
     triggers:
       - trigger: state
@@ -49,10 +51,11 @@ automation:
     actions:
       - action: !secret bojler_notify
         data:
-          title: "Bojler – voda spremna"
+          title: "{% from 'bojler_i18n.jinja' import t %}{{ t('ready_title') }}"
           message: >
-            Grejanje završeno: {{ states('sensor.bojler_temperatura_vode') }} °C,
-            {{ states('sensor.bojler_dostupni_tusevi') }} tuš(a).
+            {% from 'bojler_i18n.jinja' import t %}{{ t('ready_msg', {
+              'temp': states('sensor.bojler_temperatura_vode'),
+              'showers': states('sensor.bojler_dostupni_tusevi')}) }}
           data:
             tag: bojler_status
             group: bojler
@@ -60,10 +63,10 @@ automation:
             clickAction: /bojler-dash/bojler
 
   - id: bojler_greje_skupa_tarifa
-    alias: Bojler – greje u skupoj tarifi
+    alias: Bojler – heating in the expensive tariff
     description: >
-      Upozorenje ako bojler greje van jeftine tarife (06–24h) 10 min, a nije ručno grejanje (MANUAL/BOOST).
-      Najviše jednom u 3h.
+      Warn if the boiler heats outside the cheap tariff (06–24h) for 10 min and it is not manual heating
+      (MANUAL/BOOST). At most once every 3 h.
     mode: single
     triggers:
       - trigger: state
@@ -79,11 +82,12 @@ automation:
     actions:
       - action: !secret bojler_notify
         data:
-          title: "Bojler greje u skupoj tarifi"
+          title: "{% from 'bojler_i18n.jinja' import t %}{{ t('expensive_title') }}"
           message: >
-            Grejanje traje od
-            {{ as_local(states.binary_sensor.bojler_greje.last_changed).strftime('%H:%M') }}
-            (voda {{ states('sensor.bojler_temperatura_vode') }} °C, režim {{ states('water_heater.bojler') }}).
+            {% from 'bojler_i18n.jinja' import t %}{{ t('expensive_msg', {
+              'since': as_local(states.binary_sensor.bojler_greje.last_changed).strftime('%H:%M'),
+              'temp': states('sensor.bojler_temperatura_vode'),
+              'mode': t('mode_' ~ states('water_heater.bojler'))}) }}
           data:
             tag: bojler_skupo
             group: bojler
@@ -92,8 +96,8 @@ automation:
       - delay: "03:00:00"
 
   - id: bojler_malo_tople_vode
-    alias: Bojler – malo tople vode uveče
-    description: Ako je voda ispod 40 °C između 16 i 22h, ponudi BOOST dugmetom. Najviše jednom u 12h.
+    alias: Bojler – little hot water in the evening
+    description: If the water is below 40 °C between 16 and 22h, offer BOOST with a button. At most once every 12 h.
     mode: single
     triggers:
       - trigger: numeric_state
@@ -111,8 +115,8 @@ automation:
     actions:
       - action: !secret bojler_notify
         data:
-          title: "Bojler – malo tople vode"
-          message: "Voda je {{ states('sensor.bojler_temperatura_vode') }} °C. Uključiti BOOST (skuplja tarifa)?"
+          title: "{% from 'bojler_i18n.jinja' import t %}{{ t('low_title') }}"
+          message: "{% from 'bojler_i18n.jinja' import t %}{{ t('low_msg', {'temp': states('sensor.bojler_temperatura_vode')}) }}"
           data:
             tag: bojler_boost_ponuda
             group: bojler
@@ -120,10 +124,10 @@ automation:
             clickAction: /bojler-dash/bojler
             actions:
               - action: BOJLER_BOOST
-                title: "BOOST"
+                title: "{% from 'bojler_i18n.jinja' import t %}{{ t('boost_button') }}"
 
   - id: bojler_boost_iz_notifikacije
-    alias: Bojler – BOOST iz notifikacije
+    alias: Bojler – BOOST from a notification
     mode: single
     triggers:
       - trigger: event
@@ -134,7 +138,7 @@ automation:
       - action: script.bojler_boost
       - action: !secret bojler_notify
         data:
-          message: "BOOST uključen."
+          message: "{% from 'bojler_i18n.jinja' import t %}{{ t('boost_on') }}"
           data:
             tag: bojler_boost_ponuda
             group: bojler
@@ -142,7 +146,7 @@ automation:
             clickAction: /bojler-dash/bojler
 
   - id: bojler_boost_podsetnik
-    alias: Bojler – BOOST traje dugo
+    alias: Bojler – BOOST running for a long time
     mode: single
     triggers:
       - trigger: state
@@ -152,8 +156,8 @@ automation:
     actions:
       - action: !secret bojler_notify
         data:
-          title: "Bojler – BOOST"
-          message: "BOOST je uključen već 2 sata. Vratiti na PROGRAM iz dashboard-a?"
+          title: "{% from 'bojler_i18n.jinja' import t %}{{ t('boost_long_title') }}"
+          message: "{% from 'bojler_i18n.jinja' import t %}{{ t('boost_long_msg') }}"
           data:
             tag: bojler_boost
             group: bojler
@@ -161,8 +165,8 @@ automation:
             clickAction: /bojler-dash/bojler
 
   - id: bojler_nedostupan
-    alias: Bojler – nedostupan / ponovo dostupan
-    description: Javi ako Ariston podaci nisu dostupni 30 min, i kad se vrate posle takvog prekida.
+    alias: Bojler – unavailable / available again
+    description: Report when Ariston data has been unavailable for 30 min, and when it returns after such an outage.
     mode: queued
     triggers:
       - trigger: state
@@ -188,10 +192,11 @@ automation:
     actions:
       - action: !secret bojler_notify
         data:
-          title: "Bojler – veza"
+          title: "{% from 'bojler_i18n.jinja' import t %}{{ t('conn_title') }}"
           message: >
-            {% if trigger.id == 'nestao' %}Nema podataka sa Ariston servera već 30 min ({{ trigger.to_state.name }}).
-            Bojler i dalje radi po ugrađenom rasporedu.{% else %}Podaci sa Ariston servera ponovo stižu.{% endif %}
+            {% from 'bojler_i18n.jinja' import t %}
+            {% if trigger.id == 'nestao' %}{{ t('conn_lost', {'name': trigger.to_state.name}) }}
+            {% else %}{{ t('conn_back') }}{% endif %}
           data:
             tag: bojler_veza
             group: bojler
@@ -199,12 +204,12 @@ automation:
             clickAction: /bojler-dash/bojler
 
   - id: bojler_rucno_grejanje_kraj
-    alias: Bojler – ručno grejanje završeno → nazad na raspored
+    alias: Bojler – manual heating finished → back to the schedule
     description: >
-      Posle ručnog grejanja (MANUAL/BOOST) vrati bojler na PROGRAM da ne bi održavao temperaturu
-      ceo dan u skupoj tarifi: čim voda dostigne zadatu temperaturu (bojler sam ne staje tada — greje
-      ceo rezervoar), ako je voda već toplija od zadate pri uključivanju, kad bojler sam prestane da
-      greje, ili najkasnije posle 4h.
+      After manual heating (MANUAL/BOOST) put the boiler back on PROGRAM so it does not keep the temperature
+      all day at the expensive tariff: as soon as the water reaches the target (the boiler itself does not
+      stop then — it heats the whole tank), if the water is already hotter than the target when switched on,
+      when the boiler stops heating by itself, or after 4 h at the latest.
     mode: single
     triggers:
       - trigger: template
@@ -248,13 +253,14 @@ automation:
       - action: script.bojler_program
       - action: !secret bojler_notify
         data:
-          title: "Bojler – ručno grejanje završeno"
+          title: "{% from 'bojler_i18n.jinja' import t %}{{ t('manual_title') }}"
           message: >
-            {% if trigger.id in ['dostignuto', 'zagrejano'] %}Voda zagrejana na {{ states('sensor.bojler_temperatura_vode') }} °C
-            (zadato {{ states('input_number.bojler_rucno_temp') | int }} °C).
-            {% elif trigger.id == 'provera' %}Voda je već {{ states('sensor.bojler_temperatura_vode') }} °C — grejanje do {{ states('input_number.bojler_rucno_temp') | int }} °C nije potrebno.
-            {% else %}Ručno grejanje je trajalo 4h — prekinuto (voda {{ states('sensor.bojler_temperatura_vode') }} °C).
-            {% endif %}Bojler je vraćen na raspored.
+            {% from 'bojler_i18n.jinja' import t %}
+            {% set p = {'temp': states('sensor.bojler_temperatura_vode'),
+                        'target': states('input_number.bojler_rucno_temp') | int} %}
+            {% if trigger.id in ['dostignuto', 'zagrejano'] %}{{ t('manual_reached', p) }}
+            {% elif trigger.id == 'provera' %}{{ t('manual_already', p) }}
+            {% else %}{{ t('manual_timeout', p) }}{% endif %} {{ t('manual_back') }}
           data:
             tag: bojler_rucno
             group: bojler
@@ -262,8 +268,8 @@ automation:
             clickAction: /bojler-dash/bojler
 
   - id: bojler_antilegionela_iskljucena
-    alias: Bojler – antilegionela isključena
-    description: Upozorenje ako se antilegionela isključi bilo kojim putem (dashboard, zvanična aplikacija, panel).
+    alias: Bojler – anti-legionella switched off
+    description: Warn if anti-legionella is switched off by any means (dashboard, official app, boiler panel).
     mode: single
     triggers:
       - trigger: state
@@ -273,10 +279,8 @@ automation:
     actions:
       - action: !secret bojler_notify
         data:
-          title: "Bojler – antilegionela ISKLJUČENA"
-          message: >
-            Zaštita od legionele je upravo isključena. Ako to nije bilo namerno,
-            uključi je u zvaničnoj Ariston aplikaciji (ili javi da je uključim).
+          title: "{% from 'bojler_i18n.jinja' import t %}{{ t('antileg_title') }}"
+          message: "{% from 'bojler_i18n.jinja' import t %}{{ t('antileg_msg') }}"
           data:
             tag: bojler_antilegionela
             group: bojler
@@ -285,7 +289,7 @@ automation:
             importance: high
 
   - id: bojler_greska
-    alias: Bojler – greška uređaja
+    alias: Bojler – device error
     mode: single
     triggers:
       - trigger: numeric_state
@@ -294,10 +298,8 @@ automation:
     actions:
       - action: !secret bojler_notify
         data:
-          title: "Bojler – GREŠKA"
-          message: >
-            Bojler prijavljuje grešku (broj grešaka: {{ states('sensor.bojler_greske') }}).
-            Proveri displej bojlera ili zvaničnu aplikaciju.
+          title: "{% from 'bojler_i18n.jinja' import t %}{{ t('error_title') }}"
+          message: "{% from 'bojler_i18n.jinja' import t %}{{ t('error_msg', {'count': states('sensor.bojler_greske')}) }}"
           data:
             tag: bojler_greska
             group: bojler

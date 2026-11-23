@@ -1,0 +1,41 @@
+{
+  "language_name": "Deutsch",
+  "excel": {
+    "file_name": "boiler_verbrauch.xlsx",
+    "sheet_month": "Nach Monat",
+    "sheet_day": "Nach Tag",
+    "sheet_hour": "Nach Stunde",
+    "sheet_info": "Info",
+    "col_month": "Monat",
+    "col_date": "Datum",
+    "col_hour": "Stunde (Beginn)",
+    "kwh_cheap": "kWh Niedertarif",
+    "kwh_expensive": "kWh Hochtarif",
+    "kwh_total": "kWh gesamt",
+    "cur_cheap": "{cur} Niedertarif",
+    "cur_expensive": "{cur} Hochtarif",
+    "cur_total": "{cur} gesamt",
+    "share": "Anteil Niedertarif",
+    "total": "Summe",
+    "item": "Eintrag",
+    "value": "Wert",
+    "created": "Erstellt",
+    "cheap_hours": "Niedertarif",
+    "price_cheap": "Preis Niedertarif ({cur}/kWh)",
+    "price_expensive": "Preis Hochtarif ({cur}/kWh)",
+    "total_since": "Gesamt seit Messbeginn (kWh)",
+    "note": "Hinweis",
+    "note_text": "Ariston meldet den Verbrauch 1–3 h verspätet; das Blatt „{sheet}“ zeigt die Stunde, in der der Verbrauch erfasst wurde (nur Stunden mit Verbrauch). Tages- und Monatssummen sind exakt; der Tarif wird nach der tatsächlichen Heizzeit bestimmt.",
+    "cost": "Kosten",
+    "cost_text": "Jede kWh wird mit dem Tarifpreis bewertet, der zum Zeitpunkt der Erfassung galt."
+  },
+  "days": {
+    "mon": "Montag",
+    "tue": "Dienstag",
+    "wed": "Mittwoch",
+    "thu": "Donnerstag",
+    "fri": "Freitag",
+    "sat": "Samstag",
+    "sun": "Sonntag"
+  }
+}
