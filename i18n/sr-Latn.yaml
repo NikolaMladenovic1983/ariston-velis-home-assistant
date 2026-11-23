@@ -125,6 +125,11 @@ dashboard:
   h_usage: Potrošnja i trošak
   table_title: kWh i trošak po tarifi
   usage_graph: Potrošnja po tarifi
+  col_source: Izvor
+  col_energy: Potrošnja
+  col_cost: Trošak
+  total_row: Ukupno
+  no_data: Nema potrošnje u ovom periodu
   excel_link: Preuzmi Excel (.xlsx)
   excel_desc: "Po mesecima, danima i satima · kWh i trošak po tarifi · ažurirano {time}"
   excel_pending: Excel izveštaj se pravi…

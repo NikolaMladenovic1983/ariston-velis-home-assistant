@@ -8,20 +8,13 @@
  * Texts: ./i18n.js — generated from i18n/<lang>.yaml by tools/i18n_build.py (do not edit i18n.js by hand).
  * Served by the ariston_schedule integration at /ariston_schedule_frontend/ and loaded on every page.
  */
-const VERSION_QUERY = new URL(import.meta.url).search; // cache-busting ?v=<hash> of this file
-const { CATALOGS } = await import(`./i18n.js${VERSION_QUERY}`);
+const VERSION_QUERY = new URL(import.meta.url).search; // cache-busting ?v=<hash> of the frontend files
+const { CATALOGS, pickLanguage, languageOf } = await import(`./common.js${VERSION_QUERY}`);
+await import(`./bojler-cards.js${VERSION_QUERY}`); // live tariff table + chart (custom cards)
+export { pickLanguage };
 
 export const DASH = "/bojler-dash";
 const THEME = "Bojler";
-
-/** Pick the catalog for a HA language code ("de", "de-CH", "sr-Latn", "sr", "pt-BR" → en …). */
-export function pickLanguage(code) {
-  if (!code) return "en";
-  if (CATALOGS[code]) return code;
-  const base = code.split("-")[0];
-  if (base === "sr") return /latn/i.test(code) ? "sr-Latn" : "sr";
-  return CATALOGS[base] ? base : "en";
-}
 
 /** Replace {name} placeholders. */
 const fmt = (s, p = {}) => s.replace(/\{(\w+)\}/g, (m, k) => (k in p ? p[k] : m));
@@ -36,7 +29,7 @@ const visNot = (entity, state_not) => [{ condition: "state", entity, state_not }
 const heading = (text, icon, extra = {}) => ({ type: "heading", heading: text, heading_style: "title", icon, ...extra });
 const full = { columns: "full" };
 
-export function buildDashboard(T, currency) {
+export function buildDashboard(T, currency, lang) {
   const cur = currency || "";
 
   // -------------------------------------------------------------------- 1. Boiler (status + control)
@@ -172,8 +165,9 @@ export function buildDashboard(T, currency) {
         cards: [
           heading(T.h_usage, "mdi:chart-bar"),
           { type: "energy-date-selection", grid_options: full },
-          { type: "energy-sources-table", title: T.table_title, grid_options: full },
-          { type: "energy-usage-graph", title: T.usage_graph, grid_options: full },
+          // live versions of energy-sources-table / energy-usage-graph (those show only completed hours)
+          { type: "custom:bojler-tariff-table", title: T.table_title, language: lang, grid_options: full },
+          { type: "custom:bojler-tariff-chart", title: T.usage_graph, language: lang, grid_options: full },
           {
             type: "markdown", grid_options: { columns: 9 },
             content:
@@ -348,9 +342,8 @@ export function buildDashboard(T, currency) {
 
 export class BojlerDashboardStrategy extends (globalThis.HTMLElement ?? class {}) {
   static async generate(config, hass) {
-    const code = config.language || hass?.locale?.language || hass?.language || "en";
-    const T = CATALOGS[pickLanguage(code)];
-    return buildDashboard(T, hass?.config?.currency);
+    const lang = languageOf(config, hass);
+    return buildDashboard(CATALOGS[lang], hass?.config?.currency, lang);
   }
 }
 

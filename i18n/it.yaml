@@ -124,6 +124,11 @@ dashboard:
   h_usage: Consumi e costi
   table_title: kWh e costo per fascia
   usage_graph: Consumo per fascia
+  col_source: Fonte
+  col_energy: Consumo
+  col_cost: Costo
+  total_row: Totale
+  no_data: Nessun consumo in questo periodo
   excel_link: Scarica Excel (.xlsx)
   excel_desc: "Per mese, giorno e ora · kWh e costo per fascia · aggiornato {time}"
   excel_pending: Il report Excel è in preparazione…

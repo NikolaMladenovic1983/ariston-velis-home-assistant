@@ -138,6 +138,11 @@ totals row with `SUM` formulas.
     inactive manual value, and the fustom "program requested temperature" shows 16 °C between slots.
 - `binary_sensor.bojler_formular_razlikuje` warns when the schedule form differs from the schedule stored in
   the boiler, before anyone presses Apply.
+- **Live tariff cards** (`custom:bojler-tariff-table`, `custom:bojler-tariff-chart`, in `frontend/bojler-cards.js`)
+  replace `energy-sources-table` / `energy-usage-graph`, which read only completed hours (long-term statistics).
+  - They follow the same period picker, using the collection `hass.connection._energy_<dashboard path>`.
+  - They read `recorder/statistic_during_period`, which includes 5-minute statistics, and refresh every minute.
+  - The chart adds the part not yet in hourly statistics to the bar of the current hour/day/month.
 - Energy cards have no color per source. The theme sets `--energy-grid-consumption-color-0/-1` and defines
   both `light` and `dark` modes, because a theme without `modes` forces light mode.
 

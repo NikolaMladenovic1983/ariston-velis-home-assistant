@@ -124,6 +124,11 @@ dashboard:
   h_usage: Потребление и стоимость
   table_title: кВт·ч и стоимость по тарифам
   usage_graph: Потребление по тарифам
+  col_source: Источник
+  col_energy: Потребление
+  col_cost: Стоимость
+  total_row: Итого
+  no_data: Нет потребления за этот период
   excel_link: Скачать Excel (.xlsx)
   excel_desc: "По месяцам, дням и часам · кВт·ч и стоимость по тарифам · обновлено {time}"
   excel_pending: Отчёт Excel готовится…

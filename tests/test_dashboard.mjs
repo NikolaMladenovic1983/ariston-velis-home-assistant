@@ -50,3 +50,32 @@ const forced = await BojlerDashboardStrategy.generate({ language: "ru" }, { loca
 assert.equal(forced.views[0].title, CATALOGS.ru.tab_home);
 
 console.log(`ok dashboard strategy: ${langs.length} languages, ${reference.length} entities`);
+
+// ---- live tariff cards: pure helpers
+const cards = await import(pathToFileURL(path.join(dir, "bojler-cards.js")).href + "?v=test");
+const { bucketPeriod, buildBuckets, niceMax, bucketStart, axis } = cards;
+const day = new Date(2026, 10, 23).getTime();
+assert.equal(bucketPeriod(day, day + 86_400_000), "hour");
+assert.equal(bucketPeriod(day, day + 30 * 86_400_000), "day");
+assert.equal(bucketPeriod(day, day + 365 * 86_400_000), "month");
+assert.deepEqual([0.4, 2.35, 12, 154].map(niceMax), [0.5, 2.5, 20, 200]);
+
+// today, hourly: long-term rows up to 21h; 1.275 kWh (expensive) counted at 22:08 is only in the period total
+const h = (n) => day + n * 3_600_000;
+const rows = { cheap: [{ start: h(4), change: 2.35 }], exp: [] };
+const b = buildBuckets(day, day + 86_400_000, "hour", rows, { cheap: 2.35, exp: 1.275 }, h(22) + 600_000);
+assert.equal(b.length, 24);
+assert.equal(b[4].cheap, 2.35);
+assert.equal(b[22].exp, 1.275);                         // live remainder lands in the current hour
+assert.equal(b.reduce((s, x) => s + x.cheap + x.exp, 0), 3.625);
+// a month view puts the same remainder into today's bar
+const m0 = new Date(2026, 10, 1).getTime(), m1 = new Date(2026, 11, 1).getTime();
+const bm = buildBuckets(m0, m1, "day", { cheap: [], exp: [{ start: day - 86_400_000, change: 10 }] }, { cheap: 0, exp: 11.275 }, h(22));
+assert.equal(bm.length, 30);
+assert.equal(bm[21].exp, 10);
+assert.ok(Math.abs(bm[22].exp - 1.275) < 1e-9);
+assert.equal(bucketStart(h(22) + 600_000, "day"), day);
+assert.deepEqual(axis(2.35), { step: 1, max: 3 });
+assert.deepEqual(axis(11.275), { step: 5, max: 15 });
+assert.deepEqual(axis(154), { step: 50, max: 200 });
+console.log("ok live tariff card helpers");

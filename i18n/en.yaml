@@ -129,6 +129,11 @@ dashboard:
   h_usage: Consumption and cost
   table_title: kWh and cost per tariff
   usage_graph: Consumption per tariff
+  col_source: Source
+  col_energy: Consumption
+  col_cost: Cost
+  total_row: Total
+  no_data: No consumption in this period
   excel_link: Download Excel (.xlsx)
   excel_desc: "By month, day and hour · kWh and cost per tariff · updated {time}"
   excel_pending: The Excel report is being prepared…
