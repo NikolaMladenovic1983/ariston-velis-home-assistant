@@ -1,0 +1,15 @@
+services:
+  homeassistant:
+    image: ghcr.io/home-assistant/home-assistant:2026.11.2
+    container_name: homeassistant
+    restart: unless-stopped
+    ports:
+      # No network_mode: host (Docker Desktop on Windows doesn't support it properly) and no LAN
+      # discovery needed — the Ariston integration is cloud-only.
+      # Bound to localhost only: remote access goes through Tailscale Serve (HTTPS), so HA is not
+      # reachable from the local / public Wi-Fi network.
+      - "127.0.0.1:8123:8123"
+    volumes:
+      - ./ha-config:/config
+    environment:
+      - TZ=Europe/Belgrade   # your time zone (tariff hours are local time)

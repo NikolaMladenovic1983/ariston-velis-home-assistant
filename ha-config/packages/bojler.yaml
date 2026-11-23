@@ -1,0 +1,318 @@
+# Boiler (Ariston Velis Pro 80L): schedule form helpers, scripts and helper sensors for the dashboard.
+# Entity names / UI labels are Serbian (bojler = boiler, raspored = schedule, radni dani = weekdays,
+# vikend = weekend, ručno grejanje = manual heating, jeftina/skupa tarifa = cheap/expensive tariff).
+
+input_datetime:
+  bojler_radni_t1:
+    name: Radni dani – termin 1
+    has_date: false
+    has_time: true
+    icon: mdi:clock-outline
+  bojler_radni_t2:
+    name: Radni dani – termin 2
+    has_date: false
+    has_time: true
+    icon: mdi:clock-outline
+  bojler_vikend_t1:
+    name: Vikend – termin 1
+    has_date: false
+    has_time: true
+    icon: mdi:clock-outline
+  bojler_vikend_t2:
+    name: Vikend – termin 2
+    has_date: false
+    has_time: true
+    icon: mdi:clock-outline
+
+input_number:
+  bojler_radni_temp1:
+    name: Radni dani – temperatura 1
+    min: 40
+    max: 80
+    step: 1
+    unit_of_measurement: "°C"
+    mode: slider
+    icon: mdi:thermometer
+  bojler_radni_temp2:
+    name: Radni dani – temperatura 2
+    min: 40
+    max: 80
+    step: 1
+    unit_of_measurement: "°C"
+    mode: slider
+    icon: mdi:thermometer
+  bojler_vikend_temp1:
+    name: Vikend – temperatura 1
+    min: 40
+    max: 80
+    step: 1
+    unit_of_measurement: "°C"
+    mode: slider
+    icon: mdi:thermometer
+  bojler_vikend_temp2:
+    name: Vikend – temperatura 2
+    min: 40
+    max: 80
+    step: 1
+    unit_of_measurement: "°C"
+    mode: slider
+    icon: mdi:thermometer
+  # Electricity prices per kWh (all-inclusive, from the bill); the integration prices every counted kWh with them
+  struja_cena_jeftina:
+    name: Cena struje – jeftina tarifa
+    min: 0
+    max: 100
+    step: 0.01
+    unit_of_measurement: "RSD/kWh"
+    mode: box
+    icon: mdi:cash
+  struja_cena_skupa:
+    name: Cena struje – skupa tarifa
+    min: 0
+    max: 100
+    step: 0.01
+    unit_of_measurement: "RSD/kWh"
+    mode: box
+    icon: mdi:cash-plus
+  # Manual heating (dashboard button / Google Home): target temperature
+  bojler_rucno_temp:
+    name: Ručno grejanje – temperatura
+    min: 40
+    max: 80
+    step: 1
+    unit_of_measurement: "°C"
+    mode: slider
+    icon: mdi:thermometer-chevron-up
+
+input_boolean:
+  # Last manual-heating request (the switch shows it immediately; after 90 s it shows the real boiler mode)
+  bojler_rucno_zahtev:
+    name: Ručno grejanje – poslednji zahtev
+    icon: mdi:gesture-tap
+  bojler_radni_t2_ukljucen:
+    name: Radni dani – drugi termin
+    icon: mdi:numeric-2-circle-outline
+  bojler_vikend_t2_ukljucen:
+    name: Vikend – drugi termin
+    icon: mdi:numeric-2-circle-outline
+
+template:
+  - sensor:
+      - name: Bojler temperatura vode
+        unique_id: bojler_temperatura_vode
+        unit_of_measurement: "°C"
+        device_class: temperature
+        state_class: measurement
+        state: "{{ state_attr('water_heater.bojler', 'current_temperature') }}"
+        availability: "{{ state_attr('water_heater.bojler', 'current_temperature') is number }}"
+      - name: Bojler zadata temperatura
+        unique_id: bojler_zadata_temperatura
+        unit_of_measurement: "°C"
+        device_class: temperature
+        state: "{{ state_attr('water_heater.bojler', 'temperature') }}"
+        availability: "{{ state_attr('water_heater.bojler', 'temperature') is number }}"
+      # Cost sensors come from the ariston_schedule integration (sensor.bojler_raspored_trosak_*):
+      # persisted, never reset on restart, each kWh priced at the tariff price valid when it was counted.
+
+      # Real target: in MANUAL/BOOST the set temperature; in PROGRAM the temperature of the next schedule
+      # slot. (In PROGRAM mode water_heater "temperature" is the inactive manual value, and the fustom
+      # "program requested temperature" shows 16 °C between slots — both are misleading.)
+      - name: Bojler cilj
+        unique_id: bojler_cilj
+        unit_of_measurement: "°C"
+        device_class: temperature
+        state_class: measurement
+        icon: mdi:target
+        state: >
+          {% if states('water_heater.bojler') in ['MANUAL', 'BOOST'] %}
+            {{ state_attr('water_heater.bojler', 'temperature') }}
+          {% else %}
+            {% set t = state_attr('sensor.bojler_raspored_sledeci_termin', 'termin') or '' %}
+            {{ (t.split('→')[1] if '→' in t else '') | replace('°C', '') | trim | float(none) }}
+          {% endif %}
+        attributes:
+          izvor: >
+            {% if states('water_heater.bojler') in ['MANUAL', 'BOOST'] %}ručno grejanje
+            {% else %}raspored ({{ (state_attr('sensor.bojler_raspored_sledeci_termin', 'termin') or '—').split(' ')[0] }}){% endif %}
+        availability: >
+          {{ states('water_heater.bojler') not in ['unavailable', 'unknown'] }}
+
+  # The schedule form differs from the schedule stored in the boiler → warning before "Primeni" (Apply)
+  - binary_sensor:
+      - name: Bojler formular razlikuje
+        unique_id: bojler_formular_razlikuje
+        icon: mdi:alert-circle-outline
+        state: >
+          {% set f = namespace(r=[], v=[]) %}
+          {% for grp, ns in [('radni', 'r'), ('vikend', 'v')] %}
+            {% set lst = [states('input_datetime.bojler_' ~ grp ~ '_t1')[:5] ~ ' → '
+                          ~ ('%g' | format(states('input_number.bojler_' ~ grp ~ '_temp1') | float(0))) ~ ' °C'] %}
+            {% if is_state('input_boolean.bojler_' ~ grp ~ '_t2_ukljucen', 'on') %}
+              {% set lst = lst + [states('input_datetime.bojler_' ~ grp ~ '_t2')[:5] ~ ' → '
+                          ~ ('%g' | format(states('input_number.bojler_' ~ grp ~ '_temp2') | float(0))) ~ ' °C'] %}
+            {% endif %}
+            {% if ns == 'r' %}{% set f.r = lst | sort %}{% else %}{% set f.v = lst | sort %}{% endif %}
+          {% endfor %}
+          {% set r = state_attr('sensor.bojler_raspored_raspored', 'raspored') or {} %}
+          {{ f.r != r.get('Ponedeljak', []) or f.v != r.get('Subota', []) }}
+        availability: "{{ state_attr('sensor.bojler_raspored_raspored', 'raspored') is not none }}"
+
+  # One switch: ON = manual heating (MANUAL or BOOST), OFF = back to the schedule (PROGRAM).
+  # The schedule stored in the boiler (timeProgs) is NOT changed — only the operating mode.
+  - switch:
+      - name: Bojler ručno grejanje
+        unique_id: bojler_rucno_grejanje
+        # Do NOT use optimistic: true — it sets assumed_state and Google then reports the switch as
+        # "commandOnlyOnOff" (no state shown). Instead turn_on/turn_off wait 0.3 s at the end so the
+        # template is refreshed before Google reads the state (Google allows 2 s).
+        icon: >
+          {{ 'mdi:water-boiler' if states('water_heater.bojler') in ['MANUAL', 'BOOST'] else 'mdi:water-boiler-off' }}
+        # The Ariston cloud needs 3–5 s to change the mode, Google waits at most 2 s. So the switch shows the
+        # last request immediately and the real boiler mode 90 s after the request.
+        state: >
+          {% set z = states.input_boolean.bojler_rucno_zahtev %}
+          {% if z and (now() - z.last_changed).total_seconds() < 90 %}{{ z.state == 'on' }}
+          {% else %}{{ states('water_heater.bojler') in ['MANUAL', 'BOOST'] }}{% endif %}
+        availability: "{{ states('water_heater.bojler') not in ['unavailable', 'unknown'] }}"
+        turn_on:
+          - action: input_boolean.turn_on
+            target: { entity_id: input_boolean.bojler_rucno_zahtev }
+          - action: script.turn_on
+            target: { entity_id: script.bojler_rucno_ukljuci }
+          - delay: { milliseconds: 300 }
+        turn_off:
+          - action: input_boolean.turn_off
+            target: { entity_id: input_boolean.bojler_rucno_zahtev }
+          - action: script.turn_on
+            target: { entity_id: script.bojler_program }
+          - delay: { milliseconds: 300 }
+
+script:
+  bojler_rucno_ukljuci:
+    alias: Bojler – ručno grejanje UKLJUČI
+    icon: mdi:fire
+    mode: single
+    sequence:
+      # mode MANUAL first, then the temperature (a temperature sent in PROGRAM mode is ignored)
+      - action: water_heater.set_operation_mode
+        target: { entity_id: water_heater.bojler }
+        data: { operation_mode: MANUAL }
+      - wait_template: "{{ is_state('water_heater.bojler', 'MANUAL') }}"
+        timeout: "00:00:30"
+      - action: water_heater.set_temperature
+        target: { entity_id: water_heater.bojler }
+        data:
+          temperature: "{{ states('input_number.bojler_rucno_temp') | float(60) }}"
+
+  bojler_ucitaj_raspored:
+    alias: Bojler – učitaj trenutni raspored u formular
+    icon: mdi:download
+    mode: single
+    variables:
+      plans: "{{ state_attr('sensor.bojler_raspored_raspored', 'plans') or [] }}"
+      radni: "{{ (plans | selectattr('days', 'contains', 1) | map(attribute='shws') | first) or [] }}"
+      vikend: "{{ (plans | selectattr('days', 'contains', 6) | map(attribute='shws') | first) or [] }}"
+    sequence:
+      - if: "{{ radni | count >= 1 }}"
+        then:
+          - action: input_datetime.set_datetime
+            target: { entity_id: input_datetime.bojler_radni_t1 }
+            data: { time: "{{ radni[0].time }}" }
+          - action: input_number.set_value
+            target: { entity_id: input_number.bojler_radni_temp1 }
+            data: { value: "{{ radni[0].temp if radni[0].temp > 0 else 60 }}" }
+      - action: "input_boolean.turn_{{ 'on' if radni | count >= 2 else 'off' }}"
+        target: { entity_id: input_boolean.bojler_radni_t2_ukljucen }
+      - if: "{{ radni | count >= 2 }}"
+        then:
+          - action: input_datetime.set_datetime
+            target: { entity_id: input_datetime.bojler_radni_t2 }
+            data: { time: "{{ radni[1].time }}" }
+          - action: input_number.set_value
+            target: { entity_id: input_number.bojler_radni_temp2 }
+            data: { value: "{{ radni[1].temp if radni[1].temp > 0 else 60 }}" }
+      - if: "{{ vikend | count >= 1 }}"
+        then:
+          - action: input_datetime.set_datetime
+            target: { entity_id: input_datetime.bojler_vikend_t1 }
+            data: { time: "{{ vikend[0].time }}" }
+          - action: input_number.set_value
+            target: { entity_id: input_number.bojler_vikend_temp1 }
+            data: { value: "{{ vikend[0].temp if vikend[0].temp > 0 else 60 }}" }
+      - action: "input_boolean.turn_{{ 'on' if vikend | count >= 2 else 'off' }}"
+        target: { entity_id: input_boolean.bojler_vikend_t2_ukljucen }
+      - if: "{{ vikend | count >= 2 }}"
+        then:
+          - action: input_datetime.set_datetime
+            target: { entity_id: input_datetime.bojler_vikend_t2 }
+            data: { time: "{{ vikend[1].time }}" }
+          - action: input_number.set_value
+            target: { entity_id: input_number.bojler_vikend_temp2 }
+            data: { value: "{{ vikend[1].temp if vikend[1].temp > 0 else 60 }}" }
+
+  bojler_primeni_raspored:
+    alias: Bojler – primeni raspored iz formulara
+    icon: mdi:upload
+    mode: single
+    variables:
+      radni: >
+        {% set s = [{'time': states('input_datetime.bojler_radni_t1')[:5], 'temp': states('input_number.bojler_radni_temp1') | float}] %}
+        {% if is_state('input_boolean.bojler_radni_t2_ukljucen', 'on') %}
+          {% set s = s + [{'time': states('input_datetime.bojler_radni_t2')[:5], 'temp': states('input_number.bojler_radni_temp2') | float}] %}
+        {% endif %}
+        {{ s }}
+      vikend: >
+        {% set s = [{'time': states('input_datetime.bojler_vikend_t1')[:5], 'temp': states('input_number.bojler_vikend_temp1') | float}] %}
+        {% if is_state('input_boolean.bojler_vikend_t2_ukljucen', 'on') %}
+          {% set s = s + [{'time': states('input_datetime.bojler_vikend_t2')[:5], 'temp': states('input_number.bojler_vikend_temp2') | float}] %}
+        {% endif %}
+        {{ s }}
+    sequence:
+      - action: ariston_schedule.set_schedule
+        data:
+          plans:
+            - days: radni
+              slots: "{{ radni }}"
+            - days: vikend
+              slots: "{{ vikend }}"
+        response_variable: rezultat
+      - action: persistent_notification.create
+        data:
+          title: Bojler – raspored
+          notification_id: bojler_raspored
+          message: >
+            {% if rezultat.changed %}Raspored upisan i proveren.
+            Radni dani: {{ rezultat.after['Ponedeljak'] | join(', ') }}.
+            Vikend: {{ rezultat.after['Subota'] | join(', ') }}.
+            (backup: {{ rezultat.backup }}){% else %}Raspored je već takav — ništa nije menjano.{% endif %}
+
+  bojler_vrati_prethodni_raspored:
+    alias: Bojler – vrati raspored pre poslednje izmene
+    icon: mdi:undo
+    mode: single
+    sequence:
+      - action: ariston_schedule.restore_backup
+        response_variable: rezultat
+      - action: persistent_notification.create
+        data:
+          title: Bojler – raspored
+          notification_id: bojler_raspored
+          message: "Vraćen raspored iz {{ rezultat.restored_from }}."
+
+  bojler_boost:
+    alias: Bojler – BOOST (odmah zagrej)
+    icon: mdi:rocket-launch
+    mode: single
+    sequence:
+      - action: water_heater.set_operation_mode
+        target: { entity_id: water_heater.bojler }
+        data: { operation_mode: BOOST }
+
+  bojler_program:
+    alias: Bojler – vrati na PROGRAM
+    icon: mdi:calendar-clock
+    mode: single
+    sequence:
+      - action: water_heater.set_operation_mode
+        target: { entity_id: water_heater.bojler }
+        data: { operation_mode: PROGRAM }

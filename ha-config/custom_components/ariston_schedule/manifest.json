@@ -1,0 +1,12 @@
+{
+  "domain": "ariston_schedule",
+  "name": "Ariston raspored (Velis)",
+  "codeowners": [],
+  "config_flow": true,
+  "dependencies": [],
+  "documentation": "https://github.com/NikolaMladenovic1983/ariston-velis-home-assistant",
+  "issue_tracker": "https://github.com/NikolaMladenovic1983/ariston-velis-home-assistant/issues",
+  "iot_class": "cloud_polling",
+  "requirements": [],
+  "version": "0.3.0"
+}

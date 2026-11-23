@@ -1,0 +1,29 @@
+
+homeassistant:
+  packages: !include_dir_named packages
+
+# Loads default set of integrations. Do not remove.
+default_config:
+
+# "Bojler" dashboard as a YAML file (version-controlled)
+lovelace:
+  dashboards:
+    bojler-dash:
+      mode: yaml
+      filename: dashboards/bojler.yaml
+      title: Bojler
+      icon: mdi:water-boiler
+      show_in_sidebar: true
+      require_admin: false
+
+# Load frontend themes from the themes folder
+frontend:
+  themes: !include_dir_merge_named themes
+
+# NOTE: since HA 2026.11 the HTTP settings (reverse proxy for Tailscale Serve) are stored in .storage/http
+# and changed via the UI / websocket "http/config/configure"; a YAML "http:" block is ignored.
+# See tools/ha_http_config.py.
+
+automation: !include automations.yaml
+script: !include scripts.yaml
+scene: !include scenes.yaml

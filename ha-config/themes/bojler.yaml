@@ -1,0 +1,13 @@
+# Theme "Bojler": changes ONLY the tariff colors of the Energy cards; everything else stays default.
+# "modes" (light + dark) is required — a theme without it always renders in light mode.
+# Energy settings have no per-source color; the frontend reads --energy-grid-consumption-color-<index>
+# (order of the grid sources): -0 = first source (cheap tariff), -1 = second (expensive tariff).
+# The monthly charts on the dashboard use the same colors (green / orange).
+Bojler:
+  modes:
+    light:
+      energy-grid-consumption-color-0: "#43a047"   # cheap tariff — green
+      energy-grid-consumption-color-1: "#ef6c00"   # expensive tariff — orange
+    dark:
+      energy-grid-consumption-color-0: "#43a047"
+      energy-grid-consumption-color-1: "#ef6c00"

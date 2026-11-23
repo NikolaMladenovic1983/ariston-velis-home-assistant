@@ -1,0 +1,33 @@
+# Secrets
+.env
+ha-config/secrets.yaml
+ha-config/.storage/
+ha-config/.cloud/
+SERVICE_ACCOUNT.json
+ha-config/SERVICE_ACCOUNT.json
+
+# Home Assistant runtime
+ha-config/*.db
+ha-config/*.db-*
+ha-config/*.log*
+ha-config/.HA_VERSION
+ha-config/.ha_run.lock
+ha-config/.cache/
+ha-config/tts/
+ha-config/deps/
+ha-config/backups/
+ha-config/blueprints/
+__pycache__/
+.pytest_cache/
+
+# Third-party integrations — installed separately (see README)
+ha-config/custom_components/ariston/
+ha-config/custom_components/hacs/
+ha-config/www/community/
+
+# Local backups / generated files (contain device IDs)
+backups/
+tools/*_result.json
+ha-config/ariston_schedule_backups/
+ha-config/www/bojler-*/
+private/

@@ -1,0 +1,45 @@
+set_days:
+  fields:
+    days:
+      required: true
+      example: "radni"
+      selector:
+        select:
+          multiple: true
+          custom_value: true
+          options:
+            - "svi"
+            - "radni"
+            - "vikend"
+            - "pon"
+            - "uto"
+            - "sre"
+            - "cet"
+            - "pet"
+            - "sub"
+            - "ned"
+    slots:
+      required: true
+      example: '[{"time": "06:00", "temp": 75}]'
+      selector:
+        object:
+
+set_schedule:
+  fields:
+    plans:
+      required: true
+      example: '[{"days": "svi", "slots": [{"time": "06:00", "temp": 75}]}]'
+      selector:
+        object:
+
+restore_backup:
+  fields:
+    file:
+      required: false
+      example: "2026-11-22_131325_pre-write.json"
+      selector:
+        text:
+
+refresh:
+
+export_xlsx:

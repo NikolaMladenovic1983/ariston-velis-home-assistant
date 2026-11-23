@@ -1,0 +1,512 @@
+# Dashboard "Bojler" (UI labels in Serbian). Four tabs:
+#   Bojler      /bojler-dash/bojler       status + manual heating + cost summary (notifications open this)
+#   Potrošnja   /bojler-dash/potrosnja    consumption: kWh and cost per tariff for any day/week/month/year,
+#                                         monthly charts, Excel export
+#   Raspored    /bojler-dash/raspored     view and edit the schedule stored in the boiler
+#   Podešavanja /bojler-dash/podesavanja  electricity prices, advanced, safety settings (read-only)
+# Why tabs instead of collapsible sections: collapsing via input_boolean helpers is global (shared by all
+# devices), costs a server round-trip per tap and forces a visibility condition on every card.
+
+title: Bojler
+views:
+  # ====================================================================== 1. BOJLER
+  - title: Bojler
+    path: bojler
+    theme: Bojler
+    icon: mdi:water-boiler
+    type: sections
+    max_columns: 2
+    badges:
+      - type: entity
+        entity: binary_sensor.bojler_greje
+        name: Greje
+        show_name: true
+        show_state: true
+        state_content: state
+        color: deep-orange
+      - type: entity
+        entity: water_heater.bojler
+        name: Režim
+        show_name: true
+        show_icon: true
+        tap_action: { action: none }
+      - type: entity
+        entity: sensor.bojler_raspored_sledeci_termin
+        name: Sledeći termin
+        show_name: true
+        icon: mdi:calendar-clock
+        tap_action: { action: navigate, navigation_path: /bojler-dash/raspored }
+    sections:
+      # --- Water status
+      - type: grid
+        cards:
+          - type: heading
+            heading: Topla voda
+            heading_style: title
+            icon: mdi:water-thermometer
+          - type: gauge
+            entity: sensor.bojler_temperatura_vode
+            name: Temperatura vode
+            unit: "°C"
+            min: 20
+            max: 80
+            needle: true
+            segments:
+              - { from: 20, color: "#4a90d9" }
+              - { from: 40, color: "#f0ad4e" }
+              - { from: 50, color: "#e8732a" }
+              - { from: 65, color: "#d9534f" }
+            grid_options: { columns: 6, rows: 3 }
+          - type: vertical-stack
+            grid_options: { columns: 6 }
+            cards:
+              - type: tile
+                entity: sensor.bojler_dostupni_tusevi
+                name: Tuševi
+                icon: mdi:shower-head
+                color: blue
+                vertical: false
+              - type: tile
+                entity: sensor.bojler_cilj
+                name: Cilj
+                state_content: [state, izvor]
+                color: orange
+              - type: tile
+                entity: sensor.bojler_preostalo_vreme
+                name: Do zagrevanja
+                icon: mdi:timer-sand
+                color: deep-orange
+                visibility: [{ condition: state, entity: binary_sensor.bojler_greje, state: "on" }]
+
+      # --- Manual heating
+      - type: grid
+        cards:
+          - type: heading
+            heading: Ručno grejanje
+            heading_style: title
+            icon: mdi:fire
+            badges:
+              - type: entity
+                entity: input_number.bojler_rucno_temp
+                show_state: true
+                show_icon: true
+                color: deep-orange
+          - type: tile
+            entity: switch.bojler_rucno_grejanje
+            name: Grej odmah (van rasporeda)
+            state_content: state
+            color: deep-orange
+            grid_options: { columns: full }
+            tap_action:
+              action: toggle
+              confirmation:
+                text: >
+                  Uključeno: greje odmah do izabrane temperature (danju je struja skuplja), pa se sam vraća
+                  na raspored. Isključeno: odmah nazad na raspored.
+            icon_tap_action:
+              action: toggle
+              confirmation:
+                text: Uključiti/isključiti ručno grejanje?
+          - type: horizontal-stack
+            grid_options: { columns: full }
+            cards:
+              - &preset
+                type: button
+                name: "55°"
+                show_icon: false
+                tap_action:
+                  action: perform-action
+                  perform_action: input_number.set_value
+                  target: { entity_id: input_number.bojler_rucno_temp }
+                  data: { value: 55 }
+              - <<: *preset
+                name: "60°"
+                tap_action:
+                  action: perform-action
+                  perform_action: input_number.set_value
+                  target: { entity_id: input_number.bojler_rucno_temp }
+                  data: { value: 60 }
+              - <<: *preset
+                name: "65°"
+                tap_action:
+                  action: perform-action
+                  perform_action: input_number.set_value
+                  target: { entity_id: input_number.bojler_rucno_temp }
+                  data: { value: 65 }
+              - <<: *preset
+                name: "70°"
+                tap_action:
+                  action: perform-action
+                  perform_action: input_number.set_value
+                  target: { entity_id: input_number.bojler_rucno_temp }
+                  data: { value: 70 }
+              - <<: *preset
+                name: "75°"
+                tap_action:
+                  action: perform-action
+                  perform_action: input_number.set_value
+                  target: { entity_id: input_number.bojler_rucno_temp }
+                  data: { value: 75 }
+          - type: tile
+            entity: input_number.bojler_rucno_temp
+            name: Grej do
+            icon: mdi:thermometer-chevron-up
+            color: deep-orange
+            grid_options: { columns: full }
+            features:
+              - type: numeric-input
+                style: slider
+
+      # --- Cost summary (tap opens the Potrošnja tab)
+      - type: grid
+        cards:
+          - type: heading
+            heading: Trošak
+            heading_style: title
+            icon: mdi:cash-multiple
+            tap_action: { action: navigate, navigation_path: /bojler-dash/potrosnja }
+            badges:
+              - type: entity
+                entity: sensor.bojler_raspored_udeo_jeftine_tarife_24h
+                name: Jeftina 24h
+                show_name: true
+                show_state: true
+                color: green
+          - &stat
+            type: statistic
+            entity: sensor.bojler_raspored_trosak_ukupno
+            name: Danas
+            icon: mdi:cash
+            stat_type: change
+            period: { calendar: { period: day } }
+            grid_options: { columns: 6 }
+            tap_action: { action: navigate, navigation_path: /bojler-dash/potrosnja }
+          - <<: *stat
+            entity: sensor.bojler_raspored_ukupna_potrosnja
+            name: Danas
+            icon: mdi:lightning-bolt
+          - <<: *stat
+            name: Ovaj mesec
+            icon: mdi:cash-multiple
+            period: { calendar: { period: month } }
+          - <<: *stat
+            entity: sensor.bojler_raspored_ukupna_potrosnja
+            name: Ovaj mesec
+            icon: mdi:lightning-bolt
+            period: { calendar: { period: month } }
+
+  # ====================================================================== 2. POTROŠNJA
+  - title: Potrošnja
+    path: potrosnja
+    theme: Bojler
+    icon: mdi:chart-bar
+    type: sections
+    max_columns: 2
+    sections:
+      - type: grid
+        cards:
+          - type: heading
+            heading: Potrošnja i trošak
+            heading_style: title
+            icon: mdi:chart-bar
+          # Period picker (day / week / month / year, arrows for previous periods) drives the energy cards below
+          - type: energy-date-selection
+            grid_options: { columns: full }
+          - type: energy-sources-table
+            title: kWh i RSD po tarifi
+            grid_options: { columns: full }
+          - type: energy-usage-graph
+            title: Potrošnja po tarifi
+            grid_options: { columns: full }
+          # Excel (.xlsx) export — the built-in "Download data" is part of the HA frontend and always CSV
+          - type: markdown
+            grid_options: { columns: 9 }
+            content: >
+              {% set e = 'sensor.bojler_raspored_excel_izvestaj' %}{% set u = state_attr(e, 'url') %}
+              {% if u %}**[📥 Preuzmi Excel (.xlsx)]({{ u }})**<br>
+              <small>Po mesecima, danima i satima · kWh i RSD po tarifi ·
+              ažurirano {{ as_timestamp(states(e)) | timestamp_custom('%d.%m. u %H:%M') }}</small>
+              {% else %}Excel izveštaj se pravi…{% endif %}
+          - type: button
+            icon: mdi:refresh
+            name: Osveži
+            show_state: false
+            grid_options: { columns: 3, rows: 2 }
+            tap_action:
+              action: perform-action
+              perform_action: ariston_schedule.export_xlsx
+
+      - type: grid
+        cards:
+          - type: heading
+            heading: Po mesecima
+            heading_style: title
+            icon: mdi:calendar-month
+          - &mstat
+            type: statistic
+            entity: sensor.bojler_raspored_trosak_ukupno
+            name: Ovaj mesec
+            icon: mdi:cash-multiple
+            stat_type: change
+            period: { calendar: { period: month } }
+            grid_options: { columns: 6 }
+          - <<: *mstat
+            entity: sensor.bojler_raspored_ukupna_potrosnja
+            icon: mdi:lightning-bolt
+          - type: statistics-graph
+            title: Trošak po mesecima (RSD)
+            grid_options: { columns: full }
+            chart_type: bar
+            period: month
+            days_to_show: 365
+            stat_types: [change]
+            hide_legend: false
+            entities:
+              - entity: sensor.bojler_raspored_trosak_jeftina_tarifa
+                name: Jeftina tarifa
+                color: green
+              - entity: sensor.bojler_raspored_trosak_skupa_tarifa
+                name: Skupa tarifa
+                color: orange
+          - type: statistics-graph
+            title: Potrošnja po mesecima (kWh)
+            grid_options: { columns: full }
+            chart_type: bar
+            period: month
+            days_to_show: 365
+            stat_types: [change]
+            entities:
+              - entity: sensor.bojler_raspored_ukupna_potrosnja_jeftina_tarifa
+                name: Jeftina tarifa
+                color: green
+              - entity: sensor.bojler_raspored_ukupna_potrosnja_skupa_tarifa
+                name: Skupa tarifa
+                color: orange
+
+      - type: grid
+        cards:
+          - type: heading
+            heading: Navike grejanja
+            heading_style: title
+            icon: mdi:chart-timeline-variant
+          - type: tile
+            entity: sensor.bojler_raspored_udeo_jeftine_tarife_24h
+            name: Udeo jeftine tarife (24h)
+            color: green
+            grid_options: { columns: full }
+          - type: history-graph
+            title: Temperatura vode (48h)
+            grid_options: { columns: full }
+            hours_to_show: 48
+            entities:
+              - entity: sensor.bojler_temperatura_vode
+                name: Voda
+              - entity: sensor.bojler_cilj
+                name: Cilj
+              - entity: binary_sensor.bojler_greje
+                name: Greje
+          - type: markdown
+            grid_options: { columns: full }
+            content: >
+              <small>Ariston šalje potrošnju sa zakašnjenjem od 1–3 h, pa se po satu pojavljuje
+              kasnije nego što je bojler grejao. Dnevni i mesečni zbirovi su tačni; tarifa se
+              određuje po stvarnom vremenu grejanja.</small>
+
+  # ====================================================================== 3. RASPORED
+  - title: Raspored
+    path: raspored
+    theme: Bojler
+    icon: mdi:calendar-clock
+    type: sections
+    max_columns: 2
+    sections:
+      - type: grid
+        cards:
+          - type: heading
+            heading: Raspored u bojleru
+            heading_style: title
+            icon: mdi:calendar-clock
+          - type: markdown
+            grid_options: { columns: full }
+            content: >
+              {% set r = state_attr('sensor.bojler_raspored_raspored', 'raspored') or {} %}
+              {% set radni = r.get('Ponedeljak', []) %}{% set vikend = r.get('Subota', []) %}
+              {% if radni == vikend %}### Svaki dan: {{ radni | join(' · ') or '—' }}
+              {% else %}**Radni dani:** {{ radni | join(' · ') or '—' }}<br>**Vikend:** {{ vikend | join(' · ') or '—' }}{% endif %}
+
+              <small>Vreme = kada voda treba da bude spremna; bojler sam kreće ranije.
+              Jeftina tarifa: {{ state_attr('sensor.bojler_raspored_raspored', 'jeftina_tarifa') }}.
+              Poslednja izmena: {{ state_attr('sensor.bojler_raspored_raspored', 'poslednja_izmena') or '—' }}</small>
+          - type: tile
+            entity: sensor.bojler_raspored_sledeci_termin
+            name: Sledeći termin
+            grid_options: { columns: full }
+
+      - type: grid
+        cards:
+          - type: heading
+            heading: Izmena
+            heading_style: title
+            icon: mdi:pencil
+          - type: tile
+            entity: binary_sensor.bojler_formular_razlikuje
+            name: Formular se razlikuje od rasporeda u bojleru
+            hide_state: true
+            icon: mdi:alert
+            color: amber
+            grid_options: { columns: full }
+            visibility: [{ condition: state, entity: binary_sensor.bojler_formular_razlikuje, state: "on" }]
+            tap_action:
+              action: perform-action
+              perform_action: script.bojler_ucitaj_raspored
+              confirmation:
+                text: Učitati raspored iz bojlera u formular (izmene u formularu se odbacuju)?
+          - type: markdown
+            grid_options: { columns: full }
+            visibility: [{ condition: state, entity: binary_sensor.bojler_formular_razlikuje, state: "on" }]
+            content: >
+              <small>„Primeni“ bi upisao vrednosti iz formulara. Ako to nije namera, dodirni upozorenje
+              ili „Učitaj trenutni“.</small>
+          - type: entities
+            title: Radni dani (pon–pet)
+            grid_options: { columns: full }
+            entities:
+              - entity: input_datetime.bojler_radni_t1
+                name: Termin 1
+              - entity: input_number.bojler_radni_temp1
+                name: Temperatura 1
+              - entity: input_boolean.bojler_radni_t2_ukljucen
+                name: Drugi termin
+              - type: conditional
+                conditions: [{ entity: input_boolean.bojler_radni_t2_ukljucen, state: "on" }]
+                row: { entity: input_datetime.bojler_radni_t2, name: Termin 2 }
+              - type: conditional
+                conditions: [{ entity: input_boolean.bojler_radni_t2_ukljucen, state: "on" }]
+                row: { entity: input_number.bojler_radni_temp2, name: Temperatura 2 }
+          - type: entities
+            title: Vikend (sub–ned)
+            grid_options: { columns: full }
+            entities:
+              - entity: input_datetime.bojler_vikend_t1
+                name: Termin 1
+              - entity: input_number.bojler_vikend_temp1
+                name: Temperatura 1
+              - entity: input_boolean.bojler_vikend_t2_ukljucen
+                name: Drugi termin
+              - type: conditional
+                conditions: [{ entity: input_boolean.bojler_vikend_t2_ukljucen, state: "on" }]
+                row: { entity: input_datetime.bojler_vikend_t2, name: Termin 2 }
+              - type: conditional
+                conditions: [{ entity: input_boolean.bojler_vikend_t2_ukljucen, state: "on" }]
+                row: { entity: input_number.bojler_vikend_temp2, name: Temperatura 2 }
+          - &sbtn
+            type: button
+            name: Učitaj trenutni
+            icon: mdi:download
+            show_state: false
+            grid_options: { columns: 4, rows: 2 }
+            tap_action:
+              action: perform-action
+              perform_action: script.bojler_ucitaj_raspored
+          - <<: *sbtn
+            name: Primeni
+            icon: mdi:upload
+            tap_action:
+              action: perform-action
+              perform_action: script.bojler_primeni_raspored
+              confirmation:
+                text: "Upisati raspored iz formulara u bojler? Pre upisa se pravi backup."
+          - <<: *sbtn
+            name: Vrati prethodni
+            icon: mdi:undo
+            tap_action:
+              action: perform-action
+              perform_action: script.bojler_vrati_prethodni_raspored
+              confirmation:
+                text: "Vratiti raspored kakav je bio pre poslednje izmene?"
+
+  # ====================================================================== 4. PODEŠAVANJA
+  - title: Podešavanja
+    path: podesavanja
+    theme: Bojler
+    icon: mdi:cog
+    type: sections
+    max_columns: 2
+    sections:
+      - type: grid
+        cards:
+          - type: heading
+            heading: Cene struje
+            heading_style: title
+            icon: mdi:cash
+          - type: entities
+            grid_options: { columns: full }
+            entities:
+              - entity: input_number.struja_cena_jeftina
+                name: Jeftina tarifa (RSD/kWh)
+              - entity: input_number.struja_cena_skupa
+                name: Skupa tarifa (RSD/kWh)
+          - type: markdown
+            grid_options: { columns: full }
+            content: >
+              <small>Nova cena važi za potrošnju obračunatu od trenutka izmene; ranije obračunati iznosi se ne menjaju.</small>
+          - type: entities
+            title: Ukupno od početka merenja
+            grid_options: { columns: full }
+            entities:
+              - entity: sensor.bojler_raspored_ukupna_potrosnja
+                name: Potrošnja
+              - entity: sensor.bojler_raspored_ukupna_potrosnja_jeftina_tarifa
+                name: – jeftina tarifa
+              - entity: sensor.bojler_raspored_ukupna_potrosnja_skupa_tarifa
+                name: – skupa tarifa
+              - entity: sensor.bojler_raspored_trosak_ukupno
+                name: Trošak
+
+      - type: grid
+        cards:
+          - type: heading
+            heading: Napredno
+            heading_style: title
+            icon: mdi:tune
+          - type: tile
+            entity: water_heater.bojler
+            name: Režim
+            grid_options: { columns: full }
+            tap_action: { action: none }
+            icon_tap_action: { action: none }
+          - type: button
+            name: Vrati na raspored
+            icon: mdi:calendar-clock
+            grid_options: { columns: 6, rows: 2 }
+            tap_action:
+              action: perform-action
+              perform_action: script.bojler_program
+          - type: button
+            name: BOOST (najbrže)
+            icon: mdi:rocket-launch
+            grid_options: { columns: 6, rows: 2 }
+            tap_action:
+              action: perform-action
+              perform_action: script.bojler_boost
+              confirmation:
+                text: BOOST greje punom snagom odmah (danju skuplja struja). Pokrenuti?
+          - type: tile
+            entity: switch.bojler_ukljucen
+            name: Uključen
+          - type: tile
+            entity: switch.bojler_eco
+            name: Eco
+          - type: tile
+            entity: sensor.bojler_greske
+            name: Greške
+            grid_options: { columns: full }
+          # Text only — no tap and no more-info dialog (that dialog contains a toggle).
+          # Anti-legionella was once switched off by an accidental tap on an entity row.
+          - type: markdown
+            grid_options: { columns: full }
+            content: >
+              **Antilegionela:** {{ 'uključena ✅' if is_state('switch.bojler_antilegionela', 'on')
+              else '⚠️ ISKLJUČENA — uključiti u zvaničnoj Ariston aplikaciji ili zatražiti uključivanje' }}<br>
+              **Maks. temperatura:** {{ states('number.bojler_max_temperatura') | int(0) }} °C<br>
+              <small>Ova podešavanja se namerno ne menjaju sa dashboard-a.</small>

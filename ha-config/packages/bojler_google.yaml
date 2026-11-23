@@ -1,0 +1,40 @@
+# OPTIONAL — Google Home / Google Assistant (manual integration, a project in the Google Home Developer Console).
+# Delete this file if you don't use Google Home.
+# Google sees ONLY the manual-heating switch (schedule, anti-legionella and max temperature stay hidden).
+# Public access: e.g. Tailscale Funnel restricted to /api/google_assistant and /auth/token (docs/OPERATIONS.md).
+
+google_assistant:
+  project_id: !secret google_project_id
+  # Report State: HA pushes changes to Google Home Graph immediately (without it Google Home shows the old
+  # state for ~30 s after a command). The service-account key lives only on the server (.gitignore).
+  service_account: !include ../SERVICE_ACCOUNT.json
+  report_state: true
+  expose_by_default: false
+  entity_config:
+    switch.bojler_rucno_grejanje:
+      expose: true
+      name: Boiler
+      aliases:
+        - Bojler
+        - Water heater
+
+automation:
+  - id: bojler_google_uvek_70
+    alias: Bojler – Google uključuje grejanje do 70 °C
+    description: >
+      Kad Google Home uključi "Boiler", postavi temperaturu ručnog grejanja na 70 °C.
+      Google događaj stiže pre izvršenja komande, a skripta čita temperaturu tek posle promene režima (~3 s).
+    mode: queued
+    triggers:
+      - trigger: event
+        event_type: google_assistant_command
+    conditions:
+      - condition: template
+        value_template: >
+          {{ 'switch.bojler_rucno_grejanje' in (trigger.event.data.entity_id or [])
+             and (trigger.event.data.execution or []) | selectattr('command', 'eq', 'action.devices.commands.OnOff')
+                 | map(attribute='params.on') | select('eq', true) | list | count > 0 }}
+    actions:
+      - action: input_number.set_value
+        target: { entity_id: input_number.bojler_rucno_temp }
+        data: { value: 70 }

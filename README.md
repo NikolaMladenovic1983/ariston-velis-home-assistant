@@ -1,0 +1,170 @@
+# Ariston Velis Pro WiFi — Home Assistant
+
+A complete Home Assistant setup for **Ariston Velis** electric water heaters (built and tested with a
+Velis Pro WiFi 80 L), replacing the official app:
+
+- **Weekly heating schedule stored in the boiler itself.** Read and write the boiler's built-in time
+  program, with a backup before every write and a check after it. Heating keeps following the schedule
+  even when Home Assistant is down.
+- **Dual-tariff optimisation.** For meters with cheap night electricity (default 00:00–06:00), the dashboard
+  shows how much of the energy was used in the cheap tariff.
+- **Correct energy and cost accounting.** kWh per tariff and cost per tariff for any day, week, month or
+  year, monthly charts, the Energy dashboard and an **Excel (.xlsx) export**.
+- **Manual heating with one button.** Heats now to a chosen temperature, then automatically returns to
+  the schedule. Optional **Google Home** control ("Hey Google, turn on the boiler").
+- **Phone notifications**: morning report, water ready, heating in the expensive tariff, low hot water
+  (with a BOOST button), connection lost, anti-legionella switched off, device errors.
+
+Everything goes through the **official Ariston NET cloud API**, the same one the official app uses.
+**The boiler's firmware, hardware and network are never touched** (see [Safety](#safety)).
+
+> **Language:** the user interface (dashboard, entity names, notifications) is in **Serbian**.
+> The code and documentation are in English. A glossary is at the end.
+
+## How it works
+
+```
+ Phone (HA Companion app) ── Tailscale ──►  Home Assistant (Docker)
+ Google Home (optional)  ── Funnel ──────►   ├─ fustom "Ariston" integration   → live state + commands
+                                             ├─ ariston_schedule (this repo)    → schedule, energy, cost, Excel
+                                             ├─ packages/ (helpers, scripts, notifications, Google)
+                                             └─ dashboards/bojler.yaml (4 tabs)
+                                                     │ HTTPS
+                                                     ▼
+                                Ariston cloud  ◄── MQTT/TLS ──  boiler (cloud-only, no local API)
+```
+
+## Repository layout
+
+| Path | What it is |
+|---|---|
+| `docker-compose.yml` | Home Assistant (pinned version), bound to localhost |
+| `ha-config/configuration.yaml` | HA configuration: packages, YAML dashboard, themes |
+| `ha-config/custom_components/ariston_schedule/` | **The custom integration**: schedule read/write (backup + verification), energy ledger (no double counting, tariff split by real heating time), cost sensors, Excel export, services |
+| `ha-config/packages/bojler.yaml` | Schedule form helpers, scripts (load / apply / undo / BOOST / PROGRAM), electricity prices, manual-heating switch, helper sensors |
+| `ha-config/packages/bojler_notifikacije.yaml` | Notification automations, including auto-return to the schedule after manual heating |
+| `ha-config/packages/bojler_google.yaml` | *Optional* Google Home integration (exposes only the manual-heating switch) |
+| `ha-config/dashboards/bojler.yaml` | Dashboard with 4 tabs: Bojler (status and control), Potrošnja (consumption), Raspored (schedule), Podešavanja (settings) |
+| `ha-config/themes/bojler.yaml` | Tariff colors for the Energy cards (green = cheap, orange = expensive) |
+| `ha-config/secrets.yaml.example` | Template for your personal values (notify target, Google project) |
+| `tools/` | Standalone scripts: read-only API probe, schedule backup and edit, HA HTTP/proxy config |
+| `tests/` | Unit tests for the schedule model, energy accounting and xlsx writer |
+| `docs/DESIGN.md` | API findings, the energy-accounting problem and its solution, design decisions |
+| `docs/OPERATIONS.md` | Health checks, restart, remote access, Google Home linking, troubleshooting |
+
+## Requirements
+
+- Docker with Docker Compose. Tested with Home Assistant **2026.11.2**.
+- An Ariston NET account with the boiler added (the same login as the official app).
+- [fustom/ariston-remotethermo-home-assistant-v3](https://github.com/fustom/ariston-remotethermo-home-assistant-v3)
+  (tested with v0.20.6). It is **not** included in this repository.
+- The Home Assistant Companion app on your phone (for notifications).
+- Optional: [Tailscale](https://tailscale.com) for remote access; a Google Cloud project for Google Home.
+
+## Setup
+
+```bash
+git clone https://github.com/NikolaMladenovic1983/ariston-velis-home-assistant.git && cd ariston-velis-home-assistant
+cp .env.example .env                                  # only needed for the scripts in tools/
+cp ha-config/secrets.yaml.example ha-config/secrets.yaml
+
+# third-party Ariston integration (or install it via HACS)
+mkdir -p ha-config/custom_components/ariston
+curl -L -o /tmp/ariston.zip https://github.com/fustom/ariston-remotethermo-home-assistant-v3/releases/download/v0.20.6/ariston-remotethermo-home-assistant-v3.zip
+unzip /tmp/ariston.zip -d ha-config/custom_components/ariston
+
+docker compose up -d                                  # http://127.0.0.1:8123
+```
+
+Then, in Home Assistant:
+
+1. **Onboarding.** Create your user and enable **2FA** (Profile → Security).
+2. **Integrations.** Add **Ariston** (fustom) and **Ariston raspored (Velis)** (this repo), both with your
+   Ariston account. The second one finds the boiler's gateway automatically.
+3. **Entity IDs.** The packages and the dashboard expect the fustom entities to use the prefix `bojler_`.
+   If yours are named differently (for example `water_heater.living_room_…`), rename them in
+   Settings → Entities:
+
+   | Expected entity ID | What it is |
+   |---|---|
+   | `water_heater.bojler` | the water heater (mode, temperatures) |
+   | `binary_sensor.bojler_greje` | heating right now |
+   | `sensor.bojler_dostupni_tusevi` | available showers |
+   | `sensor.bojler_preostalo_vreme` | remaining heating time |
+   | `sensor.bojler_greske` | error count |
+   | `switch.bojler_ukljucen`, `switch.bojler_eco`, `switch.bojler_antilegionela` | power, eco, anti-legionella |
+   | `number.bojler_max_temperatura` | maximum temperature |
+
+   The entities of this repo's integration are created as `sensor.bojler_raspored_*` (device "Bojler raspored").
+4. **`secrets.yaml`.** Set `bojler_notify` to your phone's notify action
+   (`notify.mobile_app_<device>`). If you don't want Google Home, delete `packages/bojler_google.yaml`.
+5. **Electricity prices.** Enter them on the dashboard: Podešavanja → Cene struje (price per kWh).
+   The cheap-tariff hours are set in the integration's options (default 00:00–06:00).
+6. **Energy dashboard.** Add two grid sources:
+   - `sensor.bojler_raspored_ukupna_potrosnja_jeftina_tarifa` with cost `sensor.bojler_raspored_trosak_jeftina_tarifa`
+   - `sensor.bojler_raspored_ukupna_potrosnja_skupa_tarifa` with cost `sensor.bojler_raspored_trosak_skupa_tarifa`
+
+   Keep this order: the theme colors the first source green and the second orange.
+7. **Theme.** Optionally set **Bojler** as the default theme, so the built-in Energy panel uses the same
+   colors (Developer tools → Actions → `frontend.set_theme`).
+
+Remote access, Google Home and day-to-day operation are covered in [docs/OPERATIONS.md](docs/OPERATIONS.md).
+
+## Integration services (`ariston_schedule.*`)
+
+| Service | What it does |
+|---|---|
+| `set_days` | Set the slots for some days, e.g. `days: radni` (weekdays), `slots: [{time: "06:00", temp: 75}]` |
+| `set_schedule` | Replace the whole weekly schedule (`plans: [{days, slots}]`) |
+| `restore_backup` | Restore the schedule from a backup (default: the one taken before the last write) |
+| `refresh` | Re-read the schedule and consumption now |
+| `export_xlsx` | Rebuild the Excel report now (it is also rebuilt every hour) |
+
+Day aliases: `svi` (all days), `radni` (Mon–Fri), `vikend` (Sat–Sun), `pon uto sre cet pet sub ned`, or the
+numbers 0–6 (0 = Sunday). A slot is either a temperature (`temp`, 40–80 °C) or a number of showers
+(`showers`, 1–5). At most 6 slots per day.
+
+## Energy accounting in one paragraph
+
+Ariston's hourly consumption series has **no timestamps**, and it advances only when the boiler uploads
+data, often hours late and several hours at once. Treating "last value = current hour" therefore counts
+some values twice, misses others and assigns them to the wrong tariff. The integration instead compares
+consecutive snapshots of the series, so each kWh is counted exactly once. It then splits every new batch
+between the tariffs using the heating periods that Home Assistant recorded itself, and prices it at the
+tariff price valid at that moment. Details: [docs/DESIGN.md](docs/DESIGN.md#energy-accounting).
+
+## Safety
+
+- **No firmware, hardware or network changes to the boiler.** No ESP32 flashing, no UART, no local MQTT
+  broker, no DNS tricks. The boiler keeps talking only to the Ariston cloud.
+- Only values the official app allows are written. Every schedule write is backed up first and checked after.
+- **Anti-legionella is never switched off** by any automation, and the dashboard shows it as read-only
+  text. An automation warns you if it is switched off by any means. The maximum temperature is never changed.
+- Light polling (fustom 180 s, this integration 10 min) and a single HA instance. Ariston answers too-frequent
+  polling with HTTP 429.
+- The risk is at the account level, not the device level: Ariston could treat unofficial clients as a terms
+  violation. This is not legal advice about your warranty.
+
+## Tests
+
+```bash
+python -m pytest tests -q
+```
+
+## Glossary (UI terms)
+
+bojler = boiler · raspored = schedule · termin = slot · radni dani = weekdays · vikend = weekend ·
+ručno grejanje = manual heating · greje = heating · tuševi = showers · potrošnja = consumption ·
+trošak = cost · jeftina / skupa tarifa = cheap / expensive tariff · podešavanja = settings ·
+cilj = target · primeni = apply · učitaj = load · vrati = undo/restore
+
+## Credits
+
+- [fustom/ariston-remotethermo-home-assistant-v3](https://github.com/fustom/ariston-remotethermo-home-assistant-v3)
+  and [python-ariston-api](https://github.com/fustom/python-ariston-api): the base Ariston integration,
+  installed separately.
+- Not affiliated with or endorsed by Ariston.
+
+## License
+
+[MIT](LICENSE)
