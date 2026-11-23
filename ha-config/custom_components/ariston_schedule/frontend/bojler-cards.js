@@ -99,16 +99,23 @@ async function fetchTotals(hass, start, end) {
   return { kwh: { cheap: kc, exp: kx }, cost: { cheap: cc, exp: cx } };
 }
 
-async function fetchRows(hass, start, end, period) {
+async function fetchRows(hass, start, end, period, ids = SERIES.kwh) {
   const res = await hass.callWS({
     type: "recorder/statistics_during_period",
     start_time: new Date(start).toISOString(),
     end_time: new Date(end).toISOString(),
-    statistic_ids: [SERIES.kwh.cheap, SERIES.kwh.exp],
+    statistic_ids: [ids.cheap, ids.exp],
     period,
     types: ["change"],
   });
-  return { cheap: res[SERIES.kwh.cheap] || [], exp: res[SERIES.kwh.exp] || [] };
+  return { cheap: res[ids.cheap] || [], exp: res[ids.exp] || [] };
+}
+
+/** The last `n` calendar months including the current one. */
+export function monthsRange(n = 12, now = Date.now()) {
+  const e = new Date(now); e.setDate(1); e.setHours(0, 0, 0, 0); e.setMonth(e.getMonth() + 1);
+  const s = new Date(e); s.setMonth(s.getMonth() - n);
+  return { start: s.getTime(), end: e.getTime() };
 }
 
 function defaultRange() {
@@ -165,6 +172,10 @@ class BojlerTariffCard extends Base {
   _start() {
     if (this._timer || !this.isConnected) return;
     this._range = this._range || defaultRange();
+    if (this._config.range === "months") {          // fixed: last N months, independent of the picker
+      this._refresh();
+      return;
+    }
     this._timer = setInterval(() => this._refresh(), REFRESH_MS);
     // follow the period picker (energy-date-selection on this view creates the collection)
     const tryAttach = () => {
@@ -188,6 +199,7 @@ class BojlerTariffCard extends Base {
   }
 
   async _refresh() {
+    if (this._config?.range === "months") this._range = monthsRange(this._config.months || 12);
     if (!this._hass || !this._range) return;
     const { start, end } = this._range;
     try {
@@ -281,9 +293,12 @@ export class BojlerTariffTable extends BojlerTariffCard {
 export class BojlerTariffChart extends BojlerTariffCard {
   async _load(start, end) {
     const period = bucketPeriod(start, end);
-    const [rows, totals] = await Promise.all([fetchRows(this._hass, start, end, period), fetchTotals(this._hass, start, end)]);
+    const metric = this._config.metric === "cost" ? "cost" : "kwh";
+    const [rows, totals] = await Promise.all([
+      fetchRows(this._hass, start, end, period, SERIES[metric]), fetchTotals(this._hass, start, end)]);
     this._period = period;
-    this._buckets = buildBuckets(start, end, period, rows, totals.kwh);
+    this._metric = metric;
+    this._buckets = buildBuckets(start, end, period, rows, totals[metric]);
   }
 
   _start() {
@@ -306,7 +321,10 @@ export class BojlerTariffChart extends BojlerTariffCard {
     const T = this.T;
     const b = this._buckets || [];
     const total = b.reduce((s, x) => s + x.cheap + x.exp, 0);
-    const chip = `<span class="chip">${this._fmt(total)} kWh</span>`;
+    const cost = this._metric === "cost";
+    const unit = cost ? (this._hass?.config?.currency || "") : "kWh";
+    const val = (v) => (cost ? this._money(v) : `${this._fmt(v)} kWh`);
+    const chip = `<span class="chip">${val(total)}</span>`;
     const W = Math.max(280, Math.round(this.clientWidth || 400) - 32);
     const H = 220, L = 36, B = 22, TOP = 14;
     const { max, step } = axis(Math.max(0, ...b.map((x) => x.cheap + x.exp)));
@@ -323,12 +341,16 @@ export class BojlerTariffChart extends BojlerTariffCard {
     const labelEvery = Math.ceil(b.length / Math.max(2, Math.floor(plotW / 60)));
     b.forEach((x, i) => {
       const x0 = L + i * bw + bw * 0.15, w = Math.max(1, bw * 0.7);
-      const tip = `${this._label(x.t)} — ${T.cheap}: ${this._fmt(x.cheap)} kWh, ${T.expensive}: ${this._fmt(x.exp)} kWh`;
+      const tip = `${this._label(x.t)} — ${T.cheap}: ${val(x.cheap)}, ${T.expensive}: ${val(x.exp)}`;
       if (x.cheap > 0) svg += `<rect x="${x0}" y="${y(x.cheap)}" width="${w}" height="${y(0) - y(x.cheap)}" rx="2" fill="${cc}99" stroke="${cc}"><title>${tip}</title></rect>`;
       if (x.exp > 0) svg += `<rect x="${x0}" y="${y(x.cheap + x.exp)}" width="${w}" height="${y(x.cheap) - y(x.cheap + x.exp)}" rx="2" fill="${cx}99" stroke="${cx}"><title>${tip}</title></rect>`;
-      if (i % labelEvery === 0) svg += `<text x="${L + i * bw + bw / 2}" y="${H - 6}" text-anchor="middle">${this._label(x.t)}</text>`;
+      if ((b.length - 1 - i) % labelEvery === 0) {
+        const cxl = L + i * bw + bw / 2;            // keep edge labels inside the card
+        const [lx, anchor] = cxl > W - 34 ? [W - 2, "end"] : cxl < L + 22 ? [L, "start"] : [cxl, "middle"];
+        svg += `<text x="${lx}" y="${H - 6}" text-anchor="${anchor}">${this._label(x.t)}</text>`;
+      }
     });
-    svg += `<text x="${L}" y="${TOP - 4}" text-anchor="start">kWh</text>`;
+    svg += `<text x="${L}" y="${TOP - 4}" text-anchor="start">${unit}</text>`;
     const body = `
       <svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" role="img">${svg}</svg>
       ${total > 0 ? "" : `<div class="empty">${T.no_data}</div>`}

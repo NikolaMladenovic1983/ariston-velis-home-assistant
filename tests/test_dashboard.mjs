@@ -53,7 +53,7 @@ console.log(`ok dashboard strategy: ${langs.length} languages, ${reference.lengt
 
 // ---- live tariff cards: pure helpers
 const cards = await import(pathToFileURL(path.join(dir, "bojler-cards.js")).href + "?v=test");
-const { bucketPeriod, buildBuckets, niceMax, bucketStart, axis } = cards;
+const { bucketPeriod, buildBuckets, niceMax, bucketStart, axis, monthsRange } = cards;
 const day = new Date(2026, 10, 23).getTime();
 assert.equal(bucketPeriod(day, day + 86_400_000), "hour");
 assert.equal(bucketPeriod(day, day + 30 * 86_400_000), "day");
@@ -78,4 +78,12 @@ assert.equal(bucketStart(h(22) + 600_000, "day"), day);
 assert.deepEqual(axis(2.35), { step: 1, max: 3 });
 assert.deepEqual(axis(11.275), { step: 5, max: 15 });
 assert.deepEqual(axis(154), { step: 50, max: 200 });
+// monthly charts: last 12 months incl. the current one, one bucket per month, live remainder in this month
+const r12 = monthsRange(12, h(22));
+assert.equal(new Date(r12.start).getMonth(), 11);            // December 2025
+assert.equal(new Date(r12.end).getTime(), m1);                // 1 December 2026
+assert.equal(bucketPeriod(r12.start, r12.end), "month");
+const by = buildBuckets(r12.start, r12.end, "month", { cheap: [], exp: [{ start: m0, change: 140 }] }, { cheap: 0, exp: 157.85 }, h(22));
+assert.equal(by.length, 12);
+assert.ok(Math.abs(by[11].exp - 157.85) < 1e-9);
 console.log("ok live tariff card helpers");

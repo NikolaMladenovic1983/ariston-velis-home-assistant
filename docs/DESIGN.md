@@ -143,6 +143,8 @@ totals row with `SUM` formulas.
   - They follow the same period picker, using the collection `hass.connection._energy_<dashboard path>`.
   - They read `recorder/statistic_during_period`, which includes 5-minute statistics, and refresh every minute.
   - The chart adds the part not yet in hourly statistics to the bar of the current hour/day/month.
+  - The monthly cost and kWh charts use the same chart card with `metric: cost|kwh` and `range: months`
+    (last 12 months, independent of the picker).
 - Energy cards have no color per source. The theme sets `--energy-grid-consumption-color-0/-1` and defines
   both `light` and `dark` modes, because a theme without `modes` forces light mode.
 

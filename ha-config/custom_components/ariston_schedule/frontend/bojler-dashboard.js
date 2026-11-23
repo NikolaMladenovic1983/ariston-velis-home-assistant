@@ -145,10 +145,9 @@ export function buildDashboard(T, currency, lang) {
   };
 
   // -------------------------------------------------------------------- 2. Consumption
-  const monthGraph = (title, cheap, expensive) => ({
-    type: "statistics-graph", title, grid_options: full, chart_type: "bar", period: "month",
-    days_to_show: 365, stat_types: ["change"],
-    entities: [{ entity: cheap, name: T.cheap, color: "green" }, { entity: expensive, name: T.expensive, color: "orange" }],
+  // live (incl. the current hour), last 12 months, one bar per month
+  const monthGraph = (title, metric) => ({
+    type: "custom:bojler-tariff-chart", title, metric, range: "months", months: 12, language: lang, grid_options: full,
   });
   const excelEntity = "sensor.bojler_raspored_excel_izvestaj";
   const excelTime = "{{ as_timestamp(states(e)) | timestamp_custom('%d.%m. %H:%M') }}";
@@ -188,10 +187,8 @@ export function buildDashboard(T, currency, lang) {
           heading(T.h_monthly, "mdi:calendar-month"),
           { ...stat("sensor.bojler_raspored_trosak_ukupno", T.this_month, "mdi:cash-multiple", "month"), tap_action: undefined },
           { ...stat("sensor.bojler_raspored_ukupna_potrosnja", T.this_month, "mdi:lightning-bolt", "month"), tap_action: undefined },
-          monthGraph(fmt(T.cost_by_month, { cur }), "sensor.bojler_raspored_trosak_jeftina_tarifa",
-                     "sensor.bojler_raspored_trosak_skupa_tarifa"),
-          monthGraph(T.kwh_by_month, "sensor.bojler_raspored_ukupna_potrosnja_jeftina_tarifa",
-                     "sensor.bojler_raspored_ukupna_potrosnja_skupa_tarifa"),
+          monthGraph(fmt(T.cost_by_month, { cur }), "cost"),
+          monthGraph(T.kwh_by_month, "kwh"),
         ],
       },
       {
