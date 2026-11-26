@@ -11,18 +11,22 @@ Approach:
      what is new (`new_energy`). Each kWh is counted exactly once, whatever the lag.
   2. TARIFF split: Home Assistant itself records when the boiler was heating (wall-clock segments). Each new
      batch of kWh is matched FIFO against unconsumed heating time (kWh / power = hours) and split by the
-     tariff of those minutes (`allocate`). If no heating time is known (HA was down), the remainder goes to the
-     tariff of the moment the batch was observed.
+     tariff of those minutes (`allocate`). Leftovers of heating reported long ago are dropped first. If no
+     heating time is known (HA was down), the batch goes to the hour and tariff of the moment it was observed.
+  3. HOURS: the same allocation says on which wall-clock hours the kWh were used (`Allocation.hours`); the
+     ledger keeps them per hour (`book`, `cumulative`) and they are imported as statistics (energy_stats.py).
 """
 from __future__ import annotations
 
 import datetime as dt
+from dataclasses import dataclass, field
 from typing import Callable, Sequence
 
 EPS = 1e-4
 DEFAULT_POWER_KW = 1.5          # Velis Pro 80 nominal heating power
 POWER_MIN_KW, POWER_MAX_KW = 1.0, 2.5
 SEGMENT_MAX_AGE = dt.timedelta(hours=30)
+REPORT_LAG = dt.timedelta(hours=4)  # Ariston reports heating within ~1–3 h (observed 22.–26.11.)
 
 
 def series_shift(prev: Sequence[float], cur: Sequence[float]) -> int | None:
@@ -76,60 +80,127 @@ def estimate_power(kwh_seen: float, hours_seen: float) -> float:
     return min(POWER_MAX_KW, max(POWER_MIN_KW, kwh_seen / hours_seen))
 
 
+def _hour_parts(start: dt.datetime, end: dt.datetime) -> list[tuple[dt.datetime, float]]:
+    """[start, end) cut at hour boundaries: (hour start, hours in that hour)."""
+    out = []
+    t = start
+    while t < end:
+        hour = t.replace(minute=0, second=0, microsecond=0)
+        nxt = min(end, hour + dt.timedelta(hours=1))
+        out.append((hour, (nxt - t).total_seconds() / 3600))
+        t = nxt
+    return out
+
+
 def _split_by_tariff(start: dt.datetime, end: dt.datetime, is_cheap: Callable[[int], bool]) -> tuple[float, float]:
     """Hours of [start, end) in cheap / expensive tariff (split at hour boundaries, local time)."""
     cheap = exp = 0.0
-    t = start
-    while t < end:
-        nxt = min(end, (t.replace(minute=0, second=0, microsecond=0) + dt.timedelta(hours=1)))
-        h = (nxt - t).total_seconds() / 3600
-        if is_cheap(t.hour):
+    for hour, h in _hour_parts(start, end):
+        if is_cheap(hour.hour):
             cheap += h
         else:
             exp += h
-        t = nxt
     return cheap, exp
 
 
+Segment = tuple[dt.datetime, dt.datetime]
+
+
+@dataclass
+class Allocation:
+    cheap: float                                   # kWh
+    expensive: float                               # kWh
+    rest: list[Segment]                            # heating time not matched yet (FIFO queue)
+    hours: dict[dt.datetime, list[float]] = field(default_factory=dict)  # heating hour -> [cheap, expensive] kWh
+
+    def __iter__(self):  # (cheap, expensive, rest) unpacking, as before
+        return iter((self.cheap, self.expensive, self.rest))
+
+
 def allocate(
-    segments: list[tuple[dt.datetime, dt.datetime]],
+    segments: list[Segment],
     kwh: float,
     power_kw: float,
     now: dt.datetime,
     is_cheap: Callable[[int], bool],
-) -> tuple[float, float, list[tuple[dt.datetime, dt.datetime]]]:
-    """Split `kwh` into (cheap, expensive) using heating segments FIFO; returns the unconsumed segments.
+    stale_before: dt.datetime | None = None,
+) -> Allocation:
+    """Split `kwh` into cheap / expensive using heating segments FIFO and book it on the hours of heating.
 
-    Segments must be local-time aware datetimes, oldest first. Segments older than SEGMENT_MAX_AGE are dropped.
+    Segments must be local-time aware datetimes, oldest first. Dropped before matching:
+      * segments older than SEGMENT_MAX_AGE,
+      * segments that ended before `stale_before` (= previous poll − REPORT_LAG): Ariston has reported that
+        heating long ago, so what is left of it is only the error of the power estimate. Keeping it moved
+        night heating time into the next evening batch and evening time into the next night (26.11.).
+    The batch is spread over the matched heating time in proportion (the power estimate only decides how
+    much heating time one batch covers). Only if no heating time is known at all (HA was down) the batch is
+    booked on the current hour and its tariff.
     """
-    segs = [(s, e) for s, e in segments if e > now - SEGMENT_MAX_AGE and e > s]
+    segs = [(s, e) for s, e in segments
+            if e > now - SEGMENT_MAX_AGE and e > s and (stale_before is None or e >= stale_before)]
     need_h = kwh / power_kw if power_kw > 0 else 0.0
-    cheap_h = exp_h = 0.0
-    rest: list[tuple[dt.datetime, dt.datetime]] = []
+    taken: list[Segment] = []
+    rest: list[Segment] = []
     for i, (s, e) in enumerate(segs):
         if need_h <= 1e-9:
             rest = segs[i:]
             break
-        dur_h = (e - s).total_seconds() / 3600
-        take_h = min(dur_h, need_h)
+        take_h = min((e - s).total_seconds() / 3600, need_h)
         cut = s + dt.timedelta(hours=take_h)
-        c, x = _split_by_tariff(s, cut, is_cheap)
-        cheap_h += c
-        exp_h += x
+        taken.append((s, cut))
         need_h -= take_h
         if cut < e:
             rest = [(cut, e)] + segs[i + 1:]
             break
-    covered_h = cheap_h + exp_h
-    total_h = kwh / power_kw if power_kw > 0 else 0.0
-    if total_h <= 0:
-        return 0.0, 0.0, rest
-    cheap = kwh * cheap_h / total_h
-    exp = kwh * exp_h / total_h
-    remainder = max(0.0, kwh - kwh * covered_h / total_h)
-    if remainder > EPS:
-        if is_cheap(now.hour):
-            cheap += remainder
+    parts = [p for s, e in taken for p in _hour_parts(s, e)]
+    covered_h = sum(h for _, h in parts)
+    if kwh <= 0:
+        return Allocation(0.0, 0.0, rest)
+    hours: dict[dt.datetime, list[float]] = {}
+    if covered_h <= 1e-9:
+        parts, covered_h = [(now.replace(minute=0, second=0, microsecond=0), 1.0)], 1.0
+    cheap = exp = 0.0
+    for hour, h in parts:
+        part = kwh * h / covered_h
+        slot = hours.setdefault(hour, [0.0, 0.0])
+        if is_cheap(hour.hour):
+            slot[0] += part
+            cheap += part
         else:
-            exp += remainder
-    return cheap, exp, rest
+            slot[1] += part
+            exp += part
+    return Allocation(cheap, exp, rest, hours)
+
+
+# ---------------------------------------------------------------- per-hour ledger (booked on the heating hour)
+# ledger["hourly"] = {"<UTC hour ISO>": [kWh cheap, kWh expensive, cost cheap, cost expensive]}
+HOURLY_KEYS = ("energy_cheap", "energy_expensive", "cost_cheap", "cost_expensive")
+
+
+def hour_key(hour: dt.datetime) -> str:
+    return hour.astimezone(dt.UTC).replace(minute=0, second=0, microsecond=0).isoformat()
+
+
+def book(hourly: dict[str, list[float]], hours: dict[dt.datetime, list[float]],
+         price_cheap: float, price_exp: float) -> None:
+    """Add an allocation's per-hour kWh (and their cost at the given prices) to the hourly ledger."""
+    for hour, (c, x) in hours.items():
+        row = hourly.setdefault(hour_key(hour), [0.0, 0.0, 0.0, 0.0])
+        row[0] += c
+        row[1] += x
+        row[2] += c * price_cheap
+        row[3] += x * price_exp
+
+
+def cumulative(hourly: dict[str, list[float]]) -> dict[str, list[tuple[dt.datetime, float]]]:
+    """Per statistic: [(UTC hour start, running sum)], oldest first. Also energy_total / cost_total."""
+    out: dict[str, list[tuple[dt.datetime, float]]] = {k: [] for k in (*HOURLY_KEYS, "energy_total", "cost_total")}
+    sums = [0.0] * 4
+    for key in sorted(hourly, key=dt.datetime.fromisoformat):
+        start = dt.datetime.fromisoformat(key)
+        sums = [a + b for a, b in zip(sums, hourly[key])]
+        for i, name in enumerate(HOURLY_KEYS):
+            out[name].append((start, round(sums[i], 4)))
+        out["energy_total"].append((start, round(sums[0] + sums[1], 4)))
+        out["cost_total"].append((start, round(sums[2] + sums[3], 4)))
+    return out

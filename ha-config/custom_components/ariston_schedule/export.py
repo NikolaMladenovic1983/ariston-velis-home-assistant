@@ -1,4 +1,4 @@
-"""Excel report: kWh and cost per tariff by month / day / hour, from Home Assistant long-term statistics.
+"""Excel report: kWh and cost per tariff by month / day / hour of heating (external statistics, energy_stats.py).
 
 The file is written to /config/www/bojler-<random token>/bojler_potrosnja.xlsx and served at /local/...
 (/local is not behind HA login; the random token makes the URL unguessable, and HA is reachable only
@@ -16,30 +16,21 @@ from typing import Any
 from homeassistant.components.recorder import get_instance
 from homeassistant.components.recorder.statistics import statistics_during_period
 from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.storage import Store
 from homeassistant.util import dt as dt_util
 
 from . import xlsx_writer as xw
+from .energy_stats import statistic_id
 from .const import CONF_CHEAP_END, CONF_CHEAP_START, DEFAULT_CHEAP_END, DEFAULT_CHEAP_START, DOMAIN
 
 _LOGGER = logging.getLogger(__name__)
-# key -> unique_id suffix of our own sensors
+# key -> statistic (booked on the hour the boiler heated, see energy_stats.py)
 SERIES = {
-    "kwh_cheap": "energy_cumulative_cheap",
-    "kwh_exp": "energy_cumulative_expensive",
-    "rsd_cheap": "cost_cheap",
-    "rsd_exp": "cost_expensive",
+    "kwh_cheap": statistic_id("energy_cheap"),
+    "kwh_exp": statistic_id("energy_expensive"),
+    "rsd_cheap": statistic_id("cost_cheap"),
+    "rsd_exp": statistic_id("cost_expensive"),
 }
-
-
-def _entity_ids(hass: HomeAssistant, gw: str) -> dict[str, str]:
-    reg = er.async_get(hass)
-    ids = {k: reg.async_get_entity_id("sensor", DOMAIN, f"{gw}_{uid}") for k, uid in SERIES.items()}
-    missing = [k for k, v in ids.items() if not v]
-    if missing:
-        raise ValueError(f"Nedostaju senzori za izveštaj: {missing}")
-    return ids  # type: ignore[return-value]
 
 
 def _ts(row: dict[str, Any]) -> dt.datetime:
@@ -99,7 +90,7 @@ def _load_texts(hass: HomeAssistant) -> dict[str, Any]:
 
 async def async_export(hass: HomeAssistant, coord) -> dict[str, Any]:
     """Build the workbook and write it; returns {"url", "generated", "path"}."""
-    ids = _entity_ids(hass, coord.gw)
+    ids = SERIES
     now = dt_util.now()
     since = dt_util.as_utc(now - dt.timedelta(days=800))
     month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
@@ -142,7 +133,7 @@ async def async_export(hass: HomeAssistant, coord) -> dict[str, Any]:
     data = xw.build_xlsx(sheets)
     file_name = T["file_name"]
 
-    store: Store[dict[str, Any]] = Store(hass, 1, f"{DOMAIN}.{coord.gw}.export")
+    store = _store(hass, coord.gw)
     meta = await store.async_load() or {}
     if not meta.get("token"):
         meta["token"] = secrets.token_urlsafe(16)
@@ -167,5 +158,21 @@ async def async_export(hass: HomeAssistant, coord) -> dict[str, Any]:
         "months": len(sheets[0].rows),
         "days": len(sheets[1].rows),
     }
+    meta["info"] = info
+    await store.async_save(meta)  # the dashboard link survives a restart
     _LOGGER.debug("Excel report written: %s", info)
+    return info
+
+
+def _store(hass: HomeAssistant, gw: str) -> Store[dict[str, Any]]:
+    return Store(hass, 1, f"{DOMAIN}.{gw}.export")
+
+
+async def async_load_info(hass: HomeAssistant, gw: str) -> dict[str, Any]:
+    """Info about the last written report (empty if the file is gone)."""
+    meta = await _store(hass, gw).async_load() or {}
+    info = meta.get("info") or {}
+    path = info.get("path")
+    if not path or not await hass.async_add_executor_job(Path(path).exists):
+        return {}
     return info

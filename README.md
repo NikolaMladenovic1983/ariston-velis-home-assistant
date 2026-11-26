@@ -106,9 +106,11 @@ Then, in Home Assistant:
    (`notify.mobile_app_<device>`). If you don't want Google Home, delete `packages/bojler_google.yaml`.
 5. **Electricity prices.** Enter them on the dashboard: Podešavanja → Cene struje (price per kWh).
    The cheap-tariff hours are set in the integration's options (default 00:00–06:00).
-6. **Energy dashboard.** Add two grid sources:
-   - `sensor.bojler_raspored_ukupna_potrosnja_jeftina_tarifa` with cost `sensor.bojler_raspored_trosak_jeftina_tarifa`
-   - `sensor.bojler_raspored_ukupna_potrosnja_skupa_tarifa` with cost `sensor.bojler_raspored_trosak_skupa_tarifa`
+6. **Energy dashboard.** Add two grid sources (statistics booked on the hour the boiler actually heated):
+   - `ariston_schedule:energy_cheap` with cost `ariston_schedule:cost_cheap`
+   - `ariston_schedule:energy_expensive` with cost `ariston_schedule:cost_expensive`
+
+   and, as individual device, `ariston_schedule:energy_total`.
 
    Keep this order: the theme colors the first source green and the second orange.
 7. **Theme.** Optionally set **Bojler** as the default theme, so the built-in Energy panel uses the same
@@ -139,8 +141,8 @@ Ariston's hourly consumption series has **no timestamps**, and it advances only 
 data, often hours late and several hours at once. Treating "last value = current hour" therefore counts
 some values twice, misses others and assigns them to the wrong tariff. The integration instead compares
 consecutive snapshots of the series, so each kWh is counted exactly once. It then splits every new batch
-between the tariffs using the heating periods that Home Assistant recorded itself, and prices it at the
-tariff price valid at that moment. Details: [docs/DESIGN.md](docs/DESIGN.md#energy-accounting).
+between the tariffs using the heating periods that Home Assistant recorded itself, books it on the hours in
+which the boiler actually heated, and prices it at the tariff price valid at that moment. Details: [docs/DESIGN.md](docs/DESIGN.md#energy-accounting).
 
 ## Safety
 

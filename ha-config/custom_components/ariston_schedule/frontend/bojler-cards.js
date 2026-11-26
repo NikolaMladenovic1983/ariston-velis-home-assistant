@@ -1,19 +1,19 @@
 /**
  * Live tariff cards: "custom:bojler-tariff-table" and "custom:bojler-tariff-chart".
  *
- * Why: the built-in Energy cards (energy-sources-table / energy-usage-graph) read only completed hours
- * (long-term statistics), so new consumption shows up there only after the next full hour. These cards
- * follow the same period picker (energy-date-selection on the same view) but also read the 5-minute
- * statistics (recorder/statistic_during_period), like the statistic cards, and refresh every minute.
+ * They follow the period picker (energy-date-selection on the same view), show kWh and cost per tariff
+ * side by side and refresh every minute. Data: the integration's statistics booked on the hour the boiler
+ * actually heated (SERIES below). buildBuckets still adds any part of the period total that hourly rows do
+ * not contain to the current bucket (harmless when there is none).
  */
 const VERSION_QUERY = new URL(import.meta.url).search;
 const { CATALOGS, languageOf } = await import(`./common.js${VERSION_QUERY}`);
 
+// Statistics booked on the hour the boiler actually heated (imported by the integration, energy_stats.py).
+// The cumulative sensors add energy only when Ariston reports it (1–3 h late), i.e. in the wrong hour.
 export const SERIES = {
-  kwh: { cheap: "sensor.bojler_raspored_ukupna_potrosnja_jeftina_tarifa",
-         exp: "sensor.bojler_raspored_ukupna_potrosnja_skupa_tarifa" },
-  cost: { cheap: "sensor.bojler_raspored_trosak_jeftina_tarifa",
-          exp: "sensor.bojler_raspored_trosak_skupa_tarifa" },
+  kwh: { cheap: "ariston_schedule:energy_cheap", exp: "ariston_schedule:energy_expensive" },
+  cost: { cheap: "ariston_schedule:cost_cheap", exp: "ariston_schedule:cost_expensive" },
 };
 const REFRESH_MS = 60_000;
 const FALLBACK = { cheap: "#43a047", exp: "#ef6c00" };
@@ -243,8 +243,14 @@ class BojlerTariffCard extends Base {
     this._shell(this._config.title || "", `<div class="err">${String(err?.message || err)}</div>`);
   }
 
-  _fmt(v, digits = 2) {
-    return new Intl.NumberFormat(this._hass?.locale?.language || "en", { maximumFractionDigits: digits }).format(v);
+  _fmt(v, digits = 2, minDigits = 0) {
+    return new Intl.NumberFormat(this._hass?.locale?.language || "en",
+      { minimumFractionDigits: minDigits, maximumFractionDigits: digits }).format(v);
+  }
+
+  /** kWh always with 2 decimals, so values in one table line up ("1,90" next to "2,15"). */
+  _kwh(v) {
+    return `${this._fmt(v, 2, 2)} kWh`;
   }
 
   _money(v) {
@@ -273,7 +279,7 @@ export class BojlerTariffTable extends BojlerTariffCard {
     const row = (k, name) => {
       const c = this._color(k);
       return `<tr><td><span class="sw" style="background:${c}55;border-color:${c}"></span></td>
-        <td class="name">${name}</td><td class="n">${this._fmt(kwh[k])} kWh</td><td class="n">${this._money(cost[k])}</td></tr>`;
+        <td class="name">${name}</td><td class="n">${this._kwh(kwh[k])}</td><td class="n">${this._money(cost[k])}</td></tr>`;
     };
     this._shell(this._config.title || T.table_title, `
       <table>
@@ -281,7 +287,7 @@ export class BojlerTariffTable extends BojlerTariffCard {
         ${row("cheap", T.cheap)}
         ${row("exp", T.expensive)}
         <tr class="total"><td></td><td>${T.total_row}</td>
-          <td class="n">${this._fmt(kwh.cheap + kwh.exp)} kWh</td><td class="n">${this._money(cost.cheap + cost.exp)}</td></tr>
+          <td class="n">${this._kwh(kwh.cheap + kwh.exp)}</td><td class="n">${this._money(cost.cheap + cost.exp)}</td></tr>
       </table>`);
   }
 
@@ -323,7 +329,7 @@ export class BojlerTariffChart extends BojlerTariffCard {
     const total = b.reduce((s, x) => s + x.cheap + x.exp, 0);
     const cost = this._metric === "cost";
     const unit = cost ? (this._hass?.config?.currency || "") : "kWh";
-    const val = (v) => (cost ? this._money(v) : `${this._fmt(v)} kWh`);
+    const val = (v) => (cost ? this._money(v) : this._kwh(v));
     const chip = `<span class="chip">${val(total)}</span>`;
     const W = Math.max(280, Math.round(this.clientWidth || 400) - 32);
     const H = 220, L = 36, B = 22, TOP = 14;
@@ -363,11 +369,107 @@ export class BojlerTariffChart extends BojlerTariffCard {
   getCardSize() { return 6; }
 }
 
+// ------------------------------------------------------------------ Excel report (download + refresh)
+
+export const EXCEL_ENTITY = "sensor.bojler_raspored_excel_izvestaj";
+
+/** "dd.mm. HH:MM" in local time (same format as before in the markdown card). */
+export function shortTime(iso) {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "—";
+  const p = (n) => String(n).padStart(2, "0");
+  return `${p(d.getDate())}.${p(d.getMonth() + 1)}. ${p(d.getHours())}:${p(d.getMinutes())}`;
+}
+
+/** File name of the report URL ("/local/bojler-x/name.xlsx?v=1" → "name.xlsx"). */
+export function fileNameOf(url) {
+  return decodeURIComponent(String(url).split("?")[0].split("/").pop() || "report.xlsx");
+}
+
+/**
+ * Why a custom card: Home Assistant's frontend treats every same-origin link as in-app navigation, so the
+ * markdown link to /local/…xlsx only switched the dashboard view and nothing was downloaded. A link with the
+ * `download` attribute is left alone by the router and the browser saves the file.
+ */
+export class BojlerExcelCard extends Base {
+  setConfig(config) {
+    this._config = { entity: EXCEL_ENTITY, ...config };
+  }
+
+  get T() {
+    return CATALOGS[languageOf(this._config, this._hass)];
+  }
+
+  set hass(hass) {
+    this._hass = hass;
+    const st = hass.states[this._config.entity];
+    const key = st ? `${st.state}|${st.attributes.url}` : "";
+    if (key !== this._key || !this.shadowRoot) {
+      this._key = key;
+      this._render();
+    }
+  }
+
+  async _refresh() {
+    if (this._busy) return;
+    this._busy = true;
+    this._msg = "";
+    this._render();
+    try {
+      await this._hass.callService("ariston_schedule", "export_xlsx", {});
+      this._msg = this.T.excel_refreshed;
+    } catch (err) {
+      this._msg = this.T.excel_failed.replace("{error}", err?.message || String(err));
+    }
+    this._busy = false;
+    this._render();
+    clearTimeout(this._msgTimer);
+    this._msgTimer = setTimeout(() => { this._msg = ""; this._render(); }, 5000);
+  }
+
+  _render() {
+    if (!this._hass || !this._config) return;
+    const T = this.T;
+    const st = this._hass.states[this._config.entity];
+    const url = st?.attributes?.url;
+    if (!this.shadowRoot) this.attachShadow({ mode: "open" });
+    const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
+    const body = url
+      ? `<a class="dl" href="${esc(url)}" download="${esc(fileNameOf(url))}" target="_blank" rel="noopener">
+           <ha-icon icon="mdi:microsoft-excel"></ha-icon><span>${esc(T.excel_link)}</span></a>
+         <div class="desc">${esc(T.excel_desc.replace("{time}", shortTime(st.state)))}</div>`
+      : `<div class="desc">${esc(T.excel_pending)}</div>`;
+    this.shadowRoot.innerHTML = `
+      <style>
+        ha-card { padding: 12px 16px; display: flex; align-items: center; gap: 12px; height: 100%; box-sizing: border-box; }
+        .main { flex: 1; min-width: 0; }
+        a.dl { display: inline-flex; align-items: center; gap: 8px; color: var(--primary-color); font-weight: 500;
+               text-decoration: none; font-size: 16px; }
+        a.dl:hover span { text-decoration: underline; }
+        .desc { color: var(--secondary-text-color); font-size: 13px; margin-top: 4px; }
+        .msg { color: var(--primary-text-color); font-size: 13px; margin-top: 4px; }
+        button { display: flex; flex-direction: column; align-items: center; gap: 4px; background: none; border: 1px solid
+                 var(--divider-color); border-radius: 12px; padding: 8px 12px; color: var(--primary-text-color);
+                 font: inherit; font-size: 13px; cursor: pointer; min-width: 72px; }
+        button[disabled] { opacity: 0.5; cursor: progress; }
+      </style>
+      <ha-card>
+        <div class="main">${body}${this._msg ? `<div class="msg">${esc(this._msg)}</div>` : ""}</div>
+        <button ${this._busy ? "disabled" : ""}><ha-icon icon="mdi:refresh"></ha-icon>${esc(T.refresh)}</button>
+      </ha-card>`;
+    this.shadowRoot.querySelector("button").addEventListener("click", () => this._refresh());
+  }
+
+  getCardSize() { return 2; }
+  getGridOptions() { return { columns: 12, min_columns: 6, rows: "auto" }; }
+}
+
 if (globalThis.customElements) {
   if (!customElements.get("bojler-tariff-table")) customElements.define("bojler-tariff-table", BojlerTariffTable);
   if (!customElements.get("bojler-tariff-chart")) customElements.define("bojler-tariff-chart", BojlerTariffChart);
+  if (!customElements.get("bojler-excel-card")) customElements.define("bojler-excel-card", BojlerExcelCard);
   window.customCards = window.customCards || [];
-  for (const [type, name] of [["bojler-tariff-table", "Bojler – kWh/cost per tariff"], ["bojler-tariff-chart", "Bojler – consumption per tariff"]]) {
+  for (const [type, name] of [["bojler-tariff-table", "Bojler – kWh/cost per tariff"], ["bojler-tariff-chart", "Bojler – consumption per tariff"], ["bojler-excel-card", "Bojler – Excel report"]]) {
     if (!window.customCards.some((c) => c.type === type)) window.customCards.push({ type, name });
   }
 }

@@ -25,7 +25,7 @@
     "price_expensive": "Prezzo fascia piena ({cur}/kWh)",
     "total_since": "Totale dall'inizio delle misure (kWh)",
     "note": "Nota",
-    "note_text": "Ariston comunica il consumo con 1–3 h di ritardo; il foglio \"{sheet}\" mostra l'ora in cui il consumo è stato conteggiato (solo le ore con consumo). I totali giornalieri e mensili sono esatti; la fascia è determinata dall'orario effettivo di riscaldamento.",
+    "note_text": "Il foglio \"{sheet}\" mostra l'ora in cui lo scaldabagno ha davvero riscaldato (solo le ore con consumo). Ariston comunica il consumo con 1–3 h di ritardo; le ultime ore vengono completate con quel ritardo.",
     "cost": "Costo",
     "cost_text": "Ogni kWh è valorizzato al prezzo della fascia in vigore nel momento in cui è stato conteggiato."
   },

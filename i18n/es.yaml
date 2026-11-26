@@ -133,6 +133,8 @@ dashboard:
   excel_desc: "Por mes, día y hora · kWh y coste por tarifa · actualizado {time}"
   excel_pending: Se está preparando el informe Excel…
   refresh: Actualizar
+  excel_refreshed: "Informe actualizado"
+  excel_failed: "Error al actualizar: {error}"
   h_monthly: Por mes
   cost_by_month: "Coste por mes ({cur})"
   kwh_by_month: Consumo por mes (kWh)
@@ -143,7 +145,7 @@ dashboard:
   temp_48h: Temperatura del agua (48 h)
   water: Agua
   heating: Calentando
-  lag_note: Ariston informa del consumo con 1–3 h de retraso, por lo que por hora aparece más tarde que el calentamiento real. Los totales diarios y mensuales son exactos; la tarifa se determina según la hora real de calentamiento.
+  lag_note: Ariston informa del consumo con 1–3 h de retraso, así que el último calentamiento aparece aquí con ese retraso, pero siempre en la hora y la tarifa en que el termo calentó realmente.
   h_schedule: Programa del termo
   every_day: Todos los días
   weekdays: Laborables
@@ -250,6 +252,6 @@ excel:
   price_expensive: "Precio punta ({cur}/kWh)"
   total_since: Total desde el inicio de las mediciones (kWh)
   note: Nota
-  note_text: 'Ariston informa del consumo con 1–3 h de retraso; la hoja «{sheet}» muestra la hora en que se contabilizó el consumo (solo las horas con consumo). Los totales diarios y mensuales son exactos; la tarifa se determina según la hora real de calentamiento.'
+  note_text: 'La hoja «{sheet}» muestra la hora en que el termo calentó realmente (solo las horas con consumo). Ariston informa del consumo con 1–3 h de retraso; las últimas horas se completan con ese retraso.'
   cost: Coste
   cost_text: Cada kWh se valora al precio de la tarifa vigente en el momento en que se contabilizó.

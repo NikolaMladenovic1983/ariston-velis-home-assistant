@@ -93,23 +93,40 @@ cannot be used for the Energy dashboard either.
    whole window replaced with no overlap while the previous window had data. A time-based plausibility
    check ("kWh ≤ power × time since last poll") was tried and wrongly rejected every real batch.
 2. **Tariff split: heating segments.** HA records wall-clock heating periods from `binary_sensor.bojler_greje`.
-   Each new batch consumes these segments FIFO (kWh ÷ power = hours) and is split by the tariff of those
-   minutes. The heating power is learned from the data (kWh ÷ heating hours, limited to 1–2.5 kW, default
-   1.5 kW). If no segment is known (for example HA was down), the remainder goes to the tariff of the moment
-   it was observed.
+   Each new batch consumes these segments FIFO (kWh ÷ power = how much heating time one batch covers) and
+   is spread over that heating time in proportion. The heating power is learned from the data (kWh ÷ heating
+   hours, limited to 1–2.5 kW, default 1.5 kW).
+   - **Stale leftovers are dropped** (v0.5): a segment that ended more than `REPORT_LAG` (4 h) before the
+     previous poll has been reported already; what is left of it is only the error of the power estimate.
+     Until v0.4 such leftovers moved night heating time into the next evening batch and evening time into
+     the next night (26.11.: 0.55 kWh of night heating billed as expensive).
+   - Only if no heating time is known at all (for example HA was down) is the batch booked on the current
+     hour and its tariff.
+   - `tests/test_energy_model.py::test_real_24_to_26_nov` replays the real batches and heating sessions.
 3. **Cost.** kWh × tariff price **at the moment of counting** (from `input_number` helpers). It is stored in
    the ledger (`.storage/ariston_schedule.<gw>.energy`), so it never resets on restart. Energy's own
    `*_cost` sensors do reset, which broke a template that summed them.
-4. The 24 h / 7-day / cheap-share sensors are built from the ledger batches. The raw series is kept only as
-   an attribute (`ariston_serija`) for diagnostics.
+4. **Booked on the heating hour** (v0.5). Every allocation also says which wall-clock hours the kWh belong
+   to. The ledger keeps them in `hourly` (`{UTC hour: [kWh cheap, kWh expensive, cost cheap, cost expensive]}`)
+   and `energy_stats.py` imports them as external statistics `ariston_schedule:energy_cheap|energy_expensive|
+   energy_total|cost_cheap|cost_expensive|cost_total`. A late batch that adds to an earlier hour re-imports
+   that hour and the following ones. A 23:01 heating therefore appears at 23:00 of that day, not at 00:00 of
+   the next one (as it did with the sensors' own statistics).
+5. The 24 h / 7-day / cheap-share sensors are built from `hourly` (by heating time). The raw series is kept
+   only as an attribute (`ariston_serija`) for diagnostics.
+6. **Migration to v0.5** (once, when `hourly` is missing): hours before the first batch come from the
+   cumulative sensors' hourly statistics; every batch still in the ledger (8 days) is replayed against the
+   heating sessions from the recorder history. Totals stay the same; the cheap/expensive split and the costs
+   are replaced. Backup of the v0.4 ledger: `backups/energy-ledger-before-v0.5-*.json`.
 
-Limitations: energy shows up in the hour Ariston reports it (1–3 h late), not the hour of heating. Daily and
-monthly totals are correct, except around midnight.
+If the consumption endpoint fails (it returns HTTP 500 now and then), the schedule is still updated and the
+energy keeps its last values; the next successful poll counts what was missed.
 
 ### Statistics
 
-The cumulative sensors are `total_increasing` (kWh) and `total` (cost, a monetary sensor). The Energy
-dashboard uses them directly: grid source = kWh sensor, `stat_cost` = cost sensor.
+- **Dashboard, Energy dashboard and Excel** use the external statistics above (heating hour).
+- The cumulative sensors are `total_increasing` (kWh) and `total` (cost, a monetary sensor). They show the
+  totals; their own statistics are booked at report time, so they are no longer used for charts.
 
 Some HA cards take the **first recorded value as the baseline**. If the ledger already has a value when the
 statistics start, add an initial zero row (`recorder/import_statistics`). Otherwise "this month" misses the
@@ -123,7 +140,12 @@ by month, by day, by hour, and info. Each has a frozen header, filters, real dat
 totals row with `SUM` formulas.
 
 - The file is written to `/config/www/bojler-<random token>/<localized file name>.xlsx`.
-- The link is in the `url` attribute of `sensor.bojler_raspored_excel_izvestaj`.
+- The link is in the `url` attribute of `sensor.bojler_raspored_excel_izvestaj` and survives a restart
+  (stored with the token).
+- The dashboard shows it with `custom:bojler-excel-card`. A plain markdown link does not work: HA's
+  frontend treats every same-origin link as in-app navigation and only switched the view. The card's link
+  has the `download` attribute, which the router leaves alone; its Refresh button reports the result.
+- Sheets are built from the heating-hour statistics, so "by hour" and "by day" match the real heating.
 - `/local` is not behind HA login. The random token makes the URL unguessable, so keep HA reachable only
   through your private network.
 
@@ -141,8 +163,8 @@ totals row with `SUM` formulas.
 - **Live tariff cards** (`custom:bojler-tariff-table`, `custom:bojler-tariff-chart`, in `frontend/bojler-cards.js`)
   replace `energy-sources-table` / `energy-usage-graph`, which read only completed hours (long-term statistics).
   - They follow the same period picker, using the collection `hass.connection._energy_<dashboard path>`.
-  - They read `recorder/statistic_during_period`, which includes 5-minute statistics, and refresh every minute.
-  - The chart adds the part not yet in hourly statistics to the bar of the current hour/day/month.
+  - They read the heating-hour statistics (`ariston_schedule:*`, see Statistics) and refresh every minute.
+  - kWh are always shown with two decimals, so a table lines up.
   - The monthly cost and kWh charts use the same chart card with `metric: cost|kwh` and `range: months`
     (last 12 months, independent of the picker).
 - Energy cards have no color per source. The theme sets `--energy-grid-consumption-color-0/-1` and defines

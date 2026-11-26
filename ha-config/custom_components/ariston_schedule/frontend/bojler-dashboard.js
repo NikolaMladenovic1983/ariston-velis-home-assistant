@@ -15,6 +15,9 @@ export { pickLanguage };
 
 export const DASH = "/bojler-dash";
 const THEME = "Bojler";
+// booked on the hour of heating (see bojler-cards.js SERIES)
+const ENERGY_TOTAL = "ariston_schedule:energy_total";
+const COST_TOTAL = "ariston_schedule:cost_total";
 
 /** Replace {name} placeholders. */
 const fmt = (s, p = {}) => s.replace(/\{(\w+)\}/g, (m, k) => (k in p ? p[k] : m));
@@ -135,10 +138,10 @@ export function buildDashboard(T, currency, lang) {
             badges: [{ type: "entity", entity: "sensor.bojler_raspored_udeo_jeftine_tarife_24h", name: T.cheap_24h,
                        show_name: true, show_state: true, color: "green" }],
           }),
-          stat("sensor.bojler_raspored_trosak_ukupno", T.today, "mdi:cash", "day"),
-          stat("sensor.bojler_raspored_ukupna_potrosnja", T.today, "mdi:lightning-bolt", "day"),
-          stat("sensor.bojler_raspored_trosak_ukupno", T.this_month, "mdi:cash-multiple", "month"),
-          stat("sensor.bojler_raspored_ukupna_potrosnja", T.this_month, "mdi:lightning-bolt", "month"),
+          stat(COST_TOTAL, T.today, "mdi:cash", "day"),
+          stat(ENERGY_TOTAL, T.today, "mdi:lightning-bolt", "day"),
+          stat(COST_TOTAL, T.this_month, "mdi:cash-multiple", "month"),
+          stat(ENERGY_TOTAL, T.this_month, "mdi:lightning-bolt", "month"),
         ],
       },
     ],
@@ -150,7 +153,6 @@ export function buildDashboard(T, currency, lang) {
     type: "custom:bojler-tariff-chart", title, metric, range: "months", months: 12, language: lang, grid_options: full,
   });
   const excelEntity = "sensor.bojler_raspored_excel_izvestaj";
-  const excelTime = "{{ as_timestamp(states(e)) | timestamp_custom('%d.%m. %H:%M') }}";
   const usage = {
     title: T.tab_usage,
     path: "potrosnja",
@@ -167,26 +169,16 @@ export function buildDashboard(T, currency, lang) {
           // live versions of energy-sources-table / energy-usage-graph (those show only completed hours)
           { type: "custom:bojler-tariff-table", title: T.table_title, language: lang, grid_options: full },
           { type: "custom:bojler-tariff-chart", title: T.usage_graph, language: lang, grid_options: full },
-          {
-            type: "markdown", grid_options: { columns: 9 },
-            content:
-              `{% set e = '${excelEntity}' %}{% set u = state_attr(e, 'url') %}` +
-              `{% if u %}**[📥 ${T.excel_link}]({{ u }})**<br>` +
-              `<small>${fmt(T.excel_desc, { time: excelTime })}</small>` +
-              `{% else %}${T.excel_pending}{% endif %}`,
-          },
-          {
-            type: "button", icon: "mdi:refresh", name: T.refresh, show_state: false,
-            grid_options: { columns: 3, rows: 2 }, tap_action: perform("ariston_schedule.export_xlsx"),
-          },
+          // download link with the `download` attribute (a plain markdown link is swallowed by HA's router)
+          { type: "custom:bojler-excel-card", entity: excelEntity, language: lang, grid_options: full },
         ],
       },
       {
         type: "grid",
         cards: [
           heading(T.h_monthly, "mdi:calendar-month"),
-          { ...stat("sensor.bojler_raspored_trosak_ukupno", T.this_month, "mdi:cash-multiple", "month"), tap_action: undefined },
-          { ...stat("sensor.bojler_raspored_ukupna_potrosnja", T.this_month, "mdi:lightning-bolt", "month"), tap_action: undefined },
+          { ...stat(COST_TOTAL, T.this_month, "mdi:cash-multiple", "month"), tap_action: undefined },
+          { ...stat(ENERGY_TOTAL, T.this_month, "mdi:lightning-bolt", "month"), tap_action: undefined },
           monthGraph(fmt(T.cost_by_month, { cur }), "cost"),
           monthGraph(T.kwh_by_month, "kwh"),
         ],

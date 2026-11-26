@@ -138,6 +138,8 @@ dashboard:
   excel_desc: "By month, day and hour · kWh and cost per tariff · updated {time}"
   excel_pending: The Excel report is being prepared…
   refresh: Refresh
+  excel_refreshed: "Report refreshed"
+  excel_failed: "Refresh failed: {error}"
   h_monthly: By month
   cost_by_month: "Cost by month ({cur})"
   kwh_by_month: Consumption by month (kWh)
@@ -148,7 +150,7 @@ dashboard:
   temp_48h: Water temperature (48 h)
   water: Water
   heating: Heating
-  lag_note: Ariston reports consumption 1–3 h late, so per hour it appears later than the actual heating. Daily and monthly totals are exact; the tariff is determined by the actual heating time.
+  lag_note: Ariston reports consumption 1–3 h late, so the newest heating appears here with that delay — but always in the hour and tariff in which the boiler actually heated.
   h_schedule: Schedule in the boiler
   every_day: Every day
   weekdays: Weekdays
@@ -257,6 +259,6 @@ excel:
   price_expensive: "Price expensive ({cur}/kWh)"
   total_since: Total since measuring started (kWh)
   note: Note
-  note_text: 'Ariston reports consumption 1–3 h late; the "{sheet}" sheet shows the hour in which the consumption was counted (only hours with consumption). Daily and monthly totals are exact; the tariff is determined by the actual heating time.'
+  note_text: 'The "{sheet}" sheet shows the hour in which the boiler actually heated (only hours with consumption). Ariston reports consumption 1–3 h late, so the latest hours are filled in with that delay.'
   cost: Cost
   cost_text: Each kWh is priced at the tariff price valid when it was counted.

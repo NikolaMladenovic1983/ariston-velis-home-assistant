@@ -133,6 +133,8 @@ dashboard:
   excel_desc: "Par mois, jour et heure · kWh et coût par tarif · mis à jour {time}"
   excel_pending: Le rapport Excel est en préparation…
   refresh: Actualiser
+  excel_refreshed: "Rapport actualisé"
+  excel_failed: "Échec de l'actualisation : {error}"
   h_monthly: Par mois
   cost_by_month: "Coût par mois ({cur})"
   kwh_by_month: Consommation par mois (kWh)
@@ -143,7 +145,7 @@ dashboard:
   temp_48h: Température de l'eau (48 h)
   water: Eau
   heating: Chauffe
-  lag_note: Ariston transmet la consommation avec 1 à 3 h de retard ; par heure, elle apparaît donc plus tard que la chauffe réelle. Les totaux journaliers et mensuels sont exacts ; le tarif est déterminé selon l'heure réelle de chauffe.
+  lag_note: Ariston transmet la consommation avec 1 à 3 h de retard ; la dernière chauffe apparaît donc ici avec ce délai — mais toujours dans l’heure et le tarif où le chauffe-eau a réellement chauffé.
   h_schedule: Programme du chauffe-eau
   every_day: Tous les jours
   weekdays: Jours ouvrés
@@ -250,6 +252,6 @@ excel:
   price_expensive: "Prix heures pleines ({cur}/kWh)"
   total_since: Total depuis le début des mesures (kWh)
   note: Remarque
-  note_text: 'Ariston transmet la consommation avec 1 à 3 h de retard ; la feuille « {sheet} » indique l''heure à laquelle la consommation a été comptée (uniquement les heures avec consommation). Les totaux journaliers et mensuels sont exacts ; le tarif est déterminé selon l''heure réelle de chauffe.'
+  note_text: 'La feuille « {sheet} » indique l''heure à laquelle le chauffe-eau a réellement chauffé (uniquement les heures avec consommation). Ariston transmet la consommation avec 1 à 3 h de retard ; les dernières heures sont complétées avec ce délai.'
   cost: Coût
   cost_text: Chaque kWh est valorisé au prix du tarif en vigueur au moment où il a été compté.

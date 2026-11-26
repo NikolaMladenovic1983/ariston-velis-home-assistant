@@ -133,6 +133,8 @@ dashboard:
   excel_desc: "Nach Monat, Tag und Stunde · kWh und Kosten pro Tarif · aktualisiert {time}"
   excel_pending: Der Excel-Bericht wird erstellt…
   refresh: Aktualisieren
+  excel_refreshed: "Bericht aktualisiert"
+  excel_failed: "Aktualisierung fehlgeschlagen: {error}"
   h_monthly: Nach Monat
   cost_by_month: "Kosten pro Monat ({cur})"
   kwh_by_month: Verbrauch pro Monat (kWh)
@@ -143,7 +145,7 @@ dashboard:
   temp_48h: Wassertemperatur (48 h)
   water: Wasser
   heating: Heizt
-  lag_note: Ariston meldet den Verbrauch 1–3 h verspätet, daher erscheint er pro Stunde später als das tatsächliche Heizen. Tages- und Monatssummen sind exakt; der Tarif wird nach der tatsächlichen Heizzeit bestimmt.
+  lag_note: Ariston meldet den Verbrauch 1–3 h verspätet; das letzte Heizen erscheint hier daher mit dieser Verzögerung — aber immer in der Stunde und dem Tarif, in denen der Boiler tatsächlich geheizt hat.
   h_schedule: Zeitplan im Boiler
   every_day: Jeden Tag
   weekdays: Werktage
@@ -250,6 +252,6 @@ excel:
   price_expensive: "Preis Hochtarif ({cur}/kWh)"
   total_since: Gesamt seit Messbeginn (kWh)
   note: Hinweis
-  note_text: 'Ariston meldet den Verbrauch 1–3 h verspätet; das Blatt „{sheet}“ zeigt die Stunde, in der der Verbrauch erfasst wurde (nur Stunden mit Verbrauch). Tages- und Monatssummen sind exakt; der Tarif wird nach der tatsächlichen Heizzeit bestimmt.'
+  note_text: 'Das Blatt „{sheet}“ zeigt die Stunde, in der der Boiler tatsächlich geheizt hat (nur Stunden mit Verbrauch). Ariston meldet den Verbrauch 1–3 h verspätet; die letzten Stunden werden mit dieser Verzögerung ergänzt.'
   cost: Kosten
   cost_text: Jede kWh wird mit dem Tarifpreis bewertet, der zum Zeitpunkt der Erfassung galt.

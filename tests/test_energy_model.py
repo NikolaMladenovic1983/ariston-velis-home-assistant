@@ -98,10 +98,63 @@ def test_allocate_without_segments_uses_current_tariff():
     assert approx(c, 0.5)
 
 
-def test_allocate_partial_cover_and_stale_drop():
+def test_allocate_partial_cover_spreads_over_seen_heating():
+    """Power estimate too high (1.5 kWh needs 1 h, only 30 min seen): the whole batch goes to the heating
+    that was seen (cheap night), not half of it to the tariff of the moment it was reported."""
     old = (t(0) - dt.timedelta(hours=40), t(0) - dt.timedelta(hours=39))
-    c, x, rest = em.allocate([old, (t(4), t(4, 30))], 1.5, 1.5, t(20), cheap)
-    assert approx(c, 0.75) and approx(x, 0.75) and rest == []
+    a = em.allocate([old, (t(4), t(4, 30))], 1.5, 1.5, t(20), cheap)
+    assert approx(a.cheap, 1.5) and approx(a.expensive, 0) and a.rest == []
+    assert a.hours == {t(4): [1.5, 0.0]}
+
+
+def test_allocate_books_on_heating_hours():
+    a = em.allocate([(t(23, 0) - dt.timedelta(days=1), t(23, 42) - dt.timedelta(days=1))], 0.975, 1.5, t(0, 6), cheap)
+    assert approx(a.expensive, 0.975) and list(a.hours) == [t(23) - dt.timedelta(days=1)]
+
+
+def test_allocate_drops_stale_leftover():
+    evening = (t(18, 57) - dt.timedelta(days=1), t(19, 34) - dt.timedelta(days=1))
+    night = (t(3, 39), t(4, 0))
+    a = em.allocate([evening, night], 0.55, 1.72, t(4, 0), cheap, stale_before=t(4, 0) - dt.timedelta(hours=4, minutes=10))
+    assert approx(a.cheap, 0.55) and a.expensive == 0
+    assert all(s >= night[0] for s, _ in a.rest)   # evening leftover is gone
+
+
+def _replay(batches, heating, power=1.72, poll=dt.timedelta(minutes=10)):
+    """Replay real batches against real heating sessions, as the coordinator does (open segment cut at `now`)."""
+    queue, used_until, out = [], None, []
+    for when, kwh in batches:
+        for s, e in heating:
+            s = max(s, used_until) if used_until else s
+            if s < min(e, when):
+                queue.append((s, min(e, when)))
+        used_until = when
+        a = em.allocate(queue, kwh, power, when, cheap, stale_before=when - poll - em.REPORT_LAG)
+        queue = a.rest
+        out.append(a)
+    return out
+
+
+def d(day, h, m=0):
+    return dt.datetime(2026, 11, day, h, m, tzinfo=TZ)
+
+
+def test_real_24_to_26_nov():
+    """Heating sessions from binary_sensor.bojler_greje and batches from the ledger, 24.–26.11.2026.
+    v0.2 billed 0.24 + 0.55 + 0.37 kWh of night heating as expensive and 0.59 kWh of evening heating as cheap."""
+    heating = [(d(23, 20, 5), d(23, 20, 56)), (d(24, 2, 54), d(24, 5, 43)), (d(25, 4, 0), d(25, 5, 34)),
+               (d(25, 18, 57), d(25, 19, 34)), (d(25, 23, 1), d(25, 23, 43)), (d(26, 3, 39), d(26, 5, 41))]
+    batches = [(d(23, 22, 8), 1.275), (d(24, 4, 4), 1.7), (d(24, 6, 6), 2.55), (d(25, 4, 7), 0.025),
+               (d(25, 6, 9), 2.325), (d(25, 20, 3), 0.875), (d(26, 0, 6), 0.975), (d(26, 4, 0), 0.55),
+               (d(26, 6, 2), 2.525)]
+    res = _replay(batches, heating)
+    expected_cheap = [False, True, True, True, True, False, False, True, True]
+    for (when, kwh), a, is_cheap in zip(batches, res, expected_cheap):
+        assert approx(a.cheap + a.expensive, kwh)
+        assert approx(a.cheap if is_cheap else a.expensive, kwh), (when, a.cheap, a.expensive)
+    # booked on the hour of heating: 23:01-23:43 on 25.11. (not 00:00 on 26.11.)
+    assert list(res[6].hours) == [d(25, 23)]
+    assert all(h.day == 26 and h.hour in (3, 4, 5) for a in res[7:] for h in a.hours)
 
 
 def test_overnight_batches_are_plausible_and_counted():
@@ -130,6 +183,19 @@ def test_estimate_power():
     assert em.estimate_power(1, 1) == em.DEFAULT_POWER_KW
     assert approx(em.estimate_power(6, 4), 1.5)
     assert em.estimate_power(30, 5) == em.POWER_MAX_KW
+
+
+def test_hourly_book_and_cumulative():
+    hourly = {}
+    em.book(hourly, {d(25, 23): [0.0, 0.975]}, 3.5, 14)
+    em.book(hourly, {d(26, 3): [0.4, 0.0], d(26, 4): [0.15, 0.0]}, 3.5, 14)
+    em.book(hourly, {d(26, 4): [1.0, 0.0]}, 3.5, 14)                 # late batch adds to an earlier hour
+    assert list(hourly) == ["2026-11-25T22:00:00+00:00", "2026-11-26T02:00:00+00:00", "2026-11-26T03:00:00+00:00"]
+    c = em.cumulative(hourly)
+    assert [v for _, v in c["energy_total"]] == [0.975, 1.375, 2.525]
+    assert [v for _, v in c["energy_cheap"]] == [0.0, 0.4, 1.55]
+    assert approx(c["cost_total"][-1][1], 0.975 * 14 + 1.55 * 3.5)
+    assert c["energy_total"][0][0] == dt.datetime(2026, 11, 25, 22, tzinfo=dt.UTC)
 
 
 if __name__ == "__main__":

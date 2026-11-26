@@ -133,6 +133,8 @@ dashboard:
   excel_desc: "Per mese, giorno e ora · kWh e costo per fascia · aggiornato {time}"
   excel_pending: Il report Excel è in preparazione…
   refresh: Aggiorna
+  excel_refreshed: "Report aggiornato"
+  excel_failed: "Aggiornamento non riuscito: {error}"
   h_monthly: Per mese
   cost_by_month: "Costo per mese ({cur})"
   kwh_by_month: Consumo per mese (kWh)
@@ -143,7 +145,7 @@ dashboard:
   temp_48h: Temperatura dell'acqua (48 h)
   water: Acqua
   heating: Riscalda
-  lag_note: Ariston comunica il consumo con 1–3 h di ritardo, quindi per ora compare più tardi del riscaldamento effettivo. I totali giornalieri e mensili sono esatti; la fascia è determinata dall'orario effettivo di riscaldamento.
+  lag_note: Ariston comunica il consumo con 1–3 h di ritardo, quindi l’ultimo riscaldamento compare qui con quel ritardo — ma sempre nell’ora e nella fascia in cui lo scaldabagno ha davvero riscaldato.
   h_schedule: Programma nello scaldabagno
   every_day: Ogni giorno
   weekdays: Giorni feriali
@@ -250,6 +252,6 @@ excel:
   price_expensive: "Prezzo fascia piena ({cur}/kWh)"
   total_since: Totale dall'inizio delle misure (kWh)
   note: Nota
-  note_text: 'Ariston comunica il consumo con 1–3 h di ritardo; il foglio "{sheet}" mostra l''ora in cui il consumo è stato conteggiato (solo le ore con consumo). I totali giornalieri e mensili sono esatti; la fascia è determinata dall''orario effettivo di riscaldamento.'
+  note_text: 'Il foglio "{sheet}" mostra l''ora in cui lo scaldabagno ha davvero riscaldato (solo le ore con consumo). Ariston comunica il consumo con 1–3 h di ritardo; le ultime ore vengono completate con quel ritardo.'
   cost: Costo
   cost_text: Ogni kWh è valorizzato al prezzo della fascia in vigore nel momento in cui è stato conteggiato.

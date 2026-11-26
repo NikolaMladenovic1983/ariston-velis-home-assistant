@@ -17,6 +17,7 @@ from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, Upda
 from homeassistant.util import dt as dt_util
 
 from . import energy_model as em
+from . import energy_stats
 from . import schedule_model as sm
 from .api import AristonApiError, AristonScheduleApi
 from .const import (
@@ -63,6 +64,7 @@ class AristonScheduleCoordinator(DataUpdateCoordinator[ScheduleData]):
         self._store: Store[dict[str, Any]] = Store(hass, 1, f"{DOMAIN}.{self.gw}.energy")
         self._ledger: dict[str, Any] | None = None
         self.export_info: dict[str, Any] = {}
+        self._stats_pushed = False  # all hours are (re-)imported once after start-up
 
     def is_cheap_hour(self, hour: int) -> bool:
         o = self.config_entry.options
@@ -149,8 +151,11 @@ class AristonScheduleCoordinator(DataUpdateCoordinator[ScheduleData]):
             led["cost_expensive"] = led["expensive"] * self._price("expensive")
             led.pop("last_hour", None)
             _LOGGER.info("Energy ledger v2 started: %s", {k: led[k] for k in ("total", "cheap", "expensive")})
+        if "hourly" not in led:  # v0.3: book on heating hours + corrected tariff split (once, from history)
+            await self._async_rebuild_hourly(led)
         kwh, shift = em.new_energy(led["prev_series"], cur)
         last_seen = dt.datetime.fromisoformat(led["last_seen"]) if led.get("last_seen") else None
+        changed_from: str | None = None
         hours_since = (now - last_seen).total_seconds() / 3600 if last_seen else 24.0
         if not em.plausible(led["prev_series"], cur, shift, hours_since):
             _LOGGER.warning("Consumption series not comparable (shift=%s, +%.3f kWh) — resync without counting",
@@ -163,13 +168,19 @@ class AristonScheduleCoordinator(DataUpdateCoordinator[ScheduleData]):
             segs = [(dt_util.as_local(dt.datetime.fromisoformat(a)), dt_util.as_local(dt.datetime.fromisoformat(b)))
                     for a, b in led["segments"]]
             power = em.estimate_power(led["kwh_seen"], led["hours_seen"])
-            cheap, exp, rest = em.allocate(segs, kwh, power, now, self.is_cheap_hour)
+            # heating that ended long before the previous poll has been reported already (see allocate)
+            stale_before = last_seen - em.REPORT_LAG if last_seen else None
+            alloc = em.allocate(segs, kwh, power, now, self.is_cheap_hour, stale_before)
+            cheap, exp, rest = alloc
             led["segments"] = [[a.isoformat(), b.isoformat()] for a, b in rest]
+            p_cheap, p_exp = self._price("cheap"), self._price("expensive")
             led["total"] += kwh
             led["cheap"] += cheap
             led["expensive"] += exp
-            led["cost_cheap"] += cheap * self._price("cheap")
-            led["cost_expensive"] += exp * self._price("expensive")
+            led["cost_cheap"] += cheap * p_cheap
+            led["cost_expensive"] += exp * p_exp
+            em.book(led["hourly"], alloc.hours, p_cheap, p_exp)
+            changed_from = min(em.hour_key(h) for h in alloc.hours) if alloc.hours else None
             led["kwh_seen"] += kwh
             led["batches"].append([now.isoformat(), round(cheap, 4), round(exp, 4)])
             _LOGGER.info("Energy +%.3f kWh (cheap %.3f, expensive %.3f, shift %s, power %.2f kW)",
@@ -179,18 +190,113 @@ class AristonScheduleCoordinator(DataUpdateCoordinator[ScheduleData]):
         led["prev_series"] = list(cur)
         led["last_seen"] = now.isoformat()
         await self._store.async_save(led)
+        if changed_from or not self._stats_pushed:
+            energy_stats.async_push(self.hass, led["hourly"], changed_from if self._stats_pushed else None)
+            self._stats_pushed = True
         return {k: round(led[k], 3) for k in ("total", "cheap", "expensive")} | {
             "cost_cheap": round(led["cost_cheap"], 2),
             "cost_expensive": round(led["cost_expensive"], 2),
         }
 
+    async def _async_rebuild_hourly(self, led: dict[str, Any]) -> None:
+        """Migration to v0.3: rebuild the per-hour ledger and the tariff split from what is recorded.
+
+        * hours before the first batch (v0.1 era): from the cumulative sensors' hourly statistics;
+        * every batch (kept 8 days): replayed against the heating sessions from the recorder history with
+          the corrected allocation (stale leftovers dropped, booked on the heating hours).
+        Totals stay the same; the cheap/expensive split and the costs are replaced by the replayed ones.
+        """
+        from homeassistant.components.recorder import get_instance, history  # noqa: PLC0415
+        from homeassistant.components.recorder.statistics import statistics_during_period  # noqa: PLC0415
+        from homeassistant.helpers import entity_registry as er  # noqa: PLC0415
+
+        now = dt_util.now()
+        p_cheap, p_exp = self._price("cheap"), self._price("expensive")
+        batches = led["batches"]
+        first = dt.datetime.fromisoformat(batches[0][0]) if batches else now
+        first_hour = first.replace(minute=0, second=0, microsecond=0)
+        reg = er.async_get(self.hass)
+        ids = {k: reg.async_get_entity_id("sensor", DOMAIN, f"{self.gw}_energy_cumulative_{k}")
+               for k in ("cheap", "expensive")}
+        ent = self.config_entry.options.get(CONF_HEATING_ENTITY, DEFAULT_HEATING_ENTITY)
+        rec = get_instance(self.hass)
+
+        def load() -> tuple[dict, list]:
+            stats = statistics_during_period(self.hass, first_hour - dt.timedelta(days=400), first_hour,
+                                             {i for i in ids.values() if i}, "hour", None, {"change"})
+            states = history.state_changes_during_period(
+                self.hass, first - em.SEGMENT_MAX_AGE, now, ent, no_attributes=True,
+                include_start_time_state=True).get(ent, [])
+            return stats, states
+
+        stats, states = await rec.async_add_executor_job(load)
+        hourly: dict[str, list[float]] = {}
+        for kind, idx in (("cheap", 0), ("expensive", 1)):
+            for row in stats.get(ids[kind] or "", []):
+                start = row["start"]
+                start = (dt.datetime.fromtimestamp(start, dt.UTC) if isinstance(start, (int, float))
+                         else dt_util.as_utc(start))
+                change = float(row.get("change") or 0.0)
+                if change > em.EPS:
+                    hourly.setdefault(em.hour_key(start), [0.0] * 4)[idx] += change
+        for r in hourly.values():
+            r[2], r[3] = r[0] * p_cheap, r[1] * p_exp
+
+        sessions: list[tuple[dt.datetime, dt.datetime]] = []
+        on_since = None
+        for st in states:
+            t = dt_util.as_local(st.last_changed)
+            if st.state == "on" and on_since is None:
+                on_since = t
+            elif st.state == "off" and on_since is not None:
+                sessions.append((on_since, t))
+                on_since = None
+
+        power = em.estimate_power(led["kwh_seen"], led["hours_seen"])
+        queue: list[tuple[dt.datetime, dt.datetime]] = []
+        used_until: dt.datetime | None = None
+        new_batches = []
+        for iso, c, x in batches:
+            when = dt_util.as_local(dt.datetime.fromisoformat(iso))
+            for s, e in sessions:
+                s = max(s, used_until) if used_until else s
+                if s < min(e, when):
+                    queue.append((s, min(e, when)))
+            if on_since and on_since < when:  # heating was on while the batch arrived
+                queue.append((max(on_since, used_until or on_since), when))
+            used_until = when
+            alloc = em.allocate(queue, c + x, power, when, self.is_cheap_hour,
+                                stale_before=when - SCAN_INTERVAL - em.REPORT_LAG)
+            queue = alloc.rest
+            em.book(hourly, alloc.hours, p_cheap, p_exp)
+            new_batches.append([iso, round(alloc.cheap, 4), round(alloc.expensive, 4)])
+
+        kwh = sum(r[0] + r[1] for r in hourly.values())
+        if abs(kwh - led["total"]) > 0.05:
+            _LOGGER.warning("Energy rebuild: %.3f kWh in hours vs %.3f kWh counted - split kept", kwh, led["total"])
+        else:
+            for key, idx in (("cheap", 0), ("expensive", 1), ("cost_cheap", 2), ("cost_expensive", 3)):
+                led[key] = sum(r[idx] for r in hourly.values())
+            led["batches"] = new_batches
+            # unmatched heating after the last batch stays in the queue for the next batch
+            led["segments"] = [[a.isoformat(), b.isoformat()] for a, b in queue] + [
+                [max(s, used_until or s).isoformat(), e.isoformat()]
+                for s, e in sessions if used_until is None or e > used_until]
+        led["hourly"] = hourly
+        _LOGGER.info("Energy ledger v0.3: %d hours rebuilt, cheap %.3f / expensive %.3f kWh",
+                     len(hourly), led["cheap"], led["expensive"])
+
     def recent_energy(self, hours: float) -> tuple[float, float]:
-        """(cheap, expensive) kWh counted in the last `hours` hours."""
-        if not self._ledger:
+        """(cheap, expensive) kWh of heating in the last `hours` hours (by heating hour, not report time)."""
+        if not self._ledger or "hourly" not in self._ledger:
             return 0.0, 0.0
         since = dt_util.now() - dt.timedelta(hours=hours)
-        bs = [b for b in self._ledger["batches"] if dt.datetime.fromisoformat(b[0]) > since]
-        return sum(b[1] for b in bs), sum(b[2] for b in bs)
+        rows = [r for k, r in self._ledger["hourly"].items() if dt.datetime.fromisoformat(k) > since]
+        return sum(r[0] for r in rows), sum(r[1] for r in rows)
+
+    async def async_load_export_info(self) -> None:
+        from .export import async_load_info  # noqa: PLC0415
+        self.export_info = await async_load_info(self.hass, self.gw)
 
     async def async_export(self) -> None:
         from .export import async_export  # noqa: PLC0415 — recorder import only when needed
@@ -205,9 +311,19 @@ class AristonScheduleCoordinator(DataUpdateCoordinator[ScheduleData]):
     async def _async_update_data(self) -> ScheduleData:
         try:
             schedule = await self.api.get_schedule(self.gw)
-            consumption = await self.api.get_consumption(self.gw)
         except AristonApiError as err:
             raise UpdateFailed(str(err)) from err
+        try:
+            consumption = await self.api.get_consumption(self.gw)
+        except AristonApiError as err:
+            # the reports endpoint fails on its own now and then (HTTP 500): keep the schedule and the last
+            # known energy; the next successful poll counts everything that was missed (snapshot diff)
+            if self.data is None:
+                raise UpdateFailed(str(err)) from err
+            _LOGGER.warning("Consumption not available, keeping the last values: %s", err)
+            prev = self.data
+            return ScheduleData(schedule=schedule, week=sm.week_from_api(schedule), series_24=prev.series_24,
+                                daily_7d=prev.daily_7d, last_write=self._last_write, energy=prev.energy)
         series = self._series(consumption, 1)
         return ScheduleData(
             schedule=schedule,

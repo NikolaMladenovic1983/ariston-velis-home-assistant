@@ -87,3 +87,10 @@ const by = buildBuckets(r12.start, r12.end, "month", { cheap: [], exp: [{ start:
 assert.equal(by.length, 12);
 assert.ok(Math.abs(by[11].exp - 157.85) < 1e-9);
 console.log("ok live tariff card helpers");
+
+// ---- Excel card helpers
+const { shortTime, fileNameOf } = cards;
+assert.equal(fileNameOf("/local/bojler-abc/bojler_potro%C5%A1nja.xlsx?v=123"), "bojler_potrošnja.xlsx");
+assert.equal(shortTime(new Date(2026, 10, 26, 9, 5).toISOString()), "26.11. 09:05");
+assert.equal(shortTime("unknown"), "—");
+console.log("ok excel card helpers");

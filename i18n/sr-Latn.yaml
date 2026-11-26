@@ -134,6 +134,8 @@ dashboard:
   excel_desc: "Po mesecima, danima i satima · kWh i trošak po tarifi · ažurirano {time}"
   excel_pending: Excel izveštaj se pravi…
   refresh: Osveži
+  excel_refreshed: "Izveštaj osvežen"
+  excel_failed: "Osvežavanje nije uspelo: {error}"
   h_monthly: Po mesecima
   cost_by_month: "Trošak po mesecima ({cur})"
   kwh_by_month: Potrošnja po mesecima (kWh)
@@ -144,7 +146,7 @@ dashboard:
   temp_48h: Temperatura vode (48 h)
   water: Voda
   heating: Greje
-  lag_note: Ariston šalje potrošnju sa zakašnjenjem od 1–3 h, pa se po satu pojavljuje kasnije nego što je bojler grejao. Dnevni i mesečni zbirovi su tačni; tarifa se određuje po stvarnom vremenu grejanja.
+  lag_note: Ariston šalje potrošnju sa zakašnjenjem od 1–3 h, pa se poslednje grejanje ovde pojavljuje sa tim zakašnjenjem — ali uvek u satu i tarifi u kojoj je bojler stvarno grejao.
   h_schedule: Raspored u bojleru
   every_day: Svaki dan
   weekdays: Radni dani
@@ -251,6 +253,6 @@ excel:
   price_expensive: "Cena skupa ({cur}/kWh)"
   total_since: Ukupno od početka merenja (kWh)
   note: Napomena
-  note_text: 'Ariston šalje potrošnju sa zakašnjenjem od 1–3 h; list „{sheet}“ prikazuje sat u kom je potrošnja obračunata (samo sati sa potrošnjom). Dnevni i mesečni zbirovi su tačni; tarifa se određuje po stvarnom vremenu grejanja.'
+  note_text: 'List „{sheet}“ prikazuje sat u kom je bojler stvarno grejao (samo sati sa potrošnjom). Ariston šalje potrošnju sa zakašnjenjem od 1–3 h, pa se poslednji sati dopunjuju sa tim zakašnjenjem.'
   cost: Trošak
   cost_text: Svaki kWh po ceni tarife koja je važila u trenutku obračuna.
